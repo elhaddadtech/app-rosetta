@@ -22,8 +22,8 @@ return new class extends Migration
             $table->foreignId('id_institution')->constrained('institutions')->onDelete('cascade');
             $table->foreignId('id_language')->nullable()->constrained('languages')->onDelete('cascade');
             $table->foreignId('id_user')->constrained('users')->onDelete('cascade');
-            $table->date('First_Access')->default("");
-            $table->date('Last_Access')->default("");
+            $table->date('First_Access')->default(null);
+            $table->date('Last_Access')->default(null);
             $table->timestamps();
         });
     }
