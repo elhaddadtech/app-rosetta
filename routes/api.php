@@ -24,6 +24,8 @@ Route::middleware('auth:sanctum')->group( function () {
 Route::apiResource('groups', GroupController::class);
 Route::apiResource('languages', LanguageController::class);
 Route::post('/uploadUsers', [CsvUploadController::class, 'importUsersFromCsv']);
+Route::post('/upload-students', [CsvUploadController::class, 'importStudents']);
+Route::post('/upload-updateStudents', [CsvUploadController::class, 'importUpdateStudents']);
 Route::post('/uploadUpdateUsers', [CsvUploadController::class, 'importUpdateUsersFromCsv']);
 Route::post('/uploadGroups', [CsvUploadController::class, 'importGroupsFromCsv']);
 

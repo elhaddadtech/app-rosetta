@@ -2,20 +2,72 @@
 
 namespace  App\Http\Controllers\api;
 use App\Models\Role;
-use App\Models\Group;
-use App\Models\Branche;
-use App\Models\Semester;
+use App\Models\User;
+use App\Models\Student;
 use App\Models\Institution;
 use Illuminate\Http\Request;
+use App\Imports\StudentsImport;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use App\Http\Controllers\Controller;
-use Illuminate\Support\Facades\Storage;
-use Illuminate\Support\Facades\Validator;
+use Maatwebsite\Excel\Facades\Excel;
+use App\Imports\StudentsUpdateImport;
+use Maatwebsite\Excel\Concerns\ToModel;
+use Maatwebsite\Excel\Concerns\WithHeadingRow;
+use Maatwebsite\Excel\Concerns\WithValidation;
+use Maatwebsite\Excel\Concerns\WithBatchInserts;
+use Maatwebsite\Excel\Concerns\WithChunkReading;
 
 class CsvUploadController extends Controller
 {
    
+    
+
+    public function importStudents(Request $request)
+    {
+        set_time_limit(120);
+    $request->validate([
+        'csv_file' => 'required|file|mimes:csv,txt'
+    ]);
+
+    // The Excel import process
+    $import = new StudentsImport();
+    Excel::import($import, $request->file('csv_file'));
+    $duplicates = $import->getDuplicates();
+    $importCount = $import->getImportCount();
+    $errors = $import->getErrors();
+    return response()->json([
+        'success' => true,
+        'message' => 'CSV file imported and updated successfully.',
+        'import_count' => $importCount,
+        'errors' => $errors,
+        'duplicates' => $duplicates
+    ]); 
+    }
+
+    public function importUpdateStudents(Request $request)
+    {
+        set_time_limit(120);
+    $request->validate([
+        'csv_file' => 'required|file|mimes:csv,txt'
+    ]);
+
+    // The Excel import process
+    $import = new StudentsUpdateImport();
+    Excel::import($import, $request->file('csv_file'));
+    dd($import);
+    $duplicates = $import->getDuplicates();
+    $importCount = $import->getImportCount();
+    $errors = $import->getErrors();
+    return response()->json([
+        'success' => true,
+        'message' => 'CSV file updated successfully.',
+        'import_count' => $importCount,
+        'errors' => $errors,
+        'duplicates' => $duplicates
+    ]); 
+    }
+
    
     public function importUsersFromCsv(Request $request)
 {
@@ -23,154 +75,16 @@ class CsvUploadController extends Controller
         'csv_file' => 'required|file|mimes:csv,txt'
     ]);
 
-    $csvFile = $request->file('csv_file');
-    $csvData = file_get_contents($csvFile->getRealPath());
-    $rows = explode("\n", $csvData);
-    $headerRow = array_shift($rows);
-    $totalRows = count($rows);
-    $batchSize = max(100, min(1000, (int)($totalRows * 0.1)));
+    $importResult = Excel::import(new StudentsImport, $request->file('csv_file'));
 
-    DB::beginTransaction();
-    try {
-        $studentsArray = [];
-        $duplicates = [];
-        $importedCount = 0;
-
-        foreach ($rows as $index => $row) {
-            if (empty(trim($row))) continue;
-
-            $row = mb_convert_encoding($row, 'UTF-8', 'UTF-8');
-            $data = str_getcsv($row, ';');
-
-            if (count($data) < count(str_getcsv($headerRow, ';'))) {
-                Log::info("Row $index skipped due to insufficient columns");
-                continue;
-            }
-
-            // Retrieve or create institution ID only if it is not empty
-            $institutionName = strtoupper($data[5]);
-            if (!empty($institutionName)) {
-                $institutionId = Institution::where('Libelle', $institutionName)->value('id') 
-                    ?? DB::table('institutions')->insertGetId([
-                        'Libelle' => $institutionName,
-                        'created_at' => now(),
-                        'updated_at' => now(),
-                    ]);
-            } else {
-                Log::info("Row $index skipped: institution name is empty");
-                continue;
-            }
-
-            // Retrieve Role by Libelle
-            $role = Role::where('Libelle', strtolower($data[10]))->first();
-            if (!$role) {
-                Log::info("Row $index skipped: Role not found for " . $data[7]);
-                continue;
-            }
-
-            // Log retrieved IDs
-            Log::info('Retrieved Role ID: ' . $role->id);
-            Log::info('Retrieved Institution ID: ' . $institutionId);
-
-            // User data
-            $firstname = strtolower($data[0]) ?? null;
-            $lastname = strtolower($data[1]) ?? null;
-            $email = strtolower($data[2]) ?? null;
-            $dateNaissance = $data[9] ?? null;
-            $idRole = $role->id;
-
-            // Check for valid email ending
-            if (empty($firstname) || empty($lastname)) {
-                Log::info("Row $index skipped: missing firstname or lastname");
-                continue;
-            }
-
-            if (empty($email) || !preg_match('/^[a-zA-Z0-9._%+-]+@uca\.ac\.ma$/', $email)) {
-                Log::info("Row $index skipped: invalid email");
-                continue;
-            }
-
-            if (DB::table('users')->where('email', $email)->exists()) {
-                $duplicates[] = $email;
-                continue;
-            }
-
-            if (!empty($dateNaissance)) {
-                $date = \DateTime::createFromFormat('d/m/Y', $dateNaissance);
-                if ($date) {
-                    $dateNaissance = $date->format('Y-m-d');
-                } else {
-                    Log::info("Row $index skipped: invalid date format in $dateNaissance");
-                    continue;
-                }
-            }
-
-            // Insert user data
-            $userId = DB::table('users')->insertGetId([
-                'firstname' => $firstname,
-                'lastname' => $lastname,
-                'email' => $email,
-                'id_role' => $idRole,
-                'created_at' => now(),
-                'updated_at' => now(),
-            ]);
-
-            // Prepare student data
-            $studentsArray[] = [
-                'CNE' => strtolower($data[3]),
-                'Apogee' => strtolower($data[4]),
-                'date_naissance' => $dateNaissance,
-                'id_institution' => $institutionId,
-                'id_user' => $userId,
-                'created_at' => now(),
-                'updated_at' => now(),
-            ];
-
-            $importedCount++;
-
-            // Insert students in batches
-            if (count($studentsArray) >= $batchSize) {
-                DB::table('students')->insert($studentsArray);
-                $studentsArray = [];
-            }
-        }
-
-        // Insert any remaining student data
-        if (!empty($studentsArray)) {
-            DB::table('students')->insert($studentsArray);
-        }
-
-        DB::commit();
-
-        if (!empty($duplicates)) {
-            Log::info('Skipped duplicate emails: ' . implode(', ', $duplicates));
-        }
-
-        return response()->json([
-            'success' => true,
-            'message' => 'CSV file imported successfully.',
-            'imported_count' => $importedCount,
-            'duplicates_count' => count($duplicates),
-            'duplicates' => $duplicates
-        ]);
-
-    } catch (\Exception $e) {
-        DB::rollBack();
-        Log::error('Import error: ' . $e->getMessage());
-        return response()->json([
-            'success' => false,
-            'message' => 'Error importing CSV file: ' . $e->getMessage(),
-            'duplicates' => $duplicates
-        ], 500);
-    }
+    return response()->json($importResult);
 }
 
     
 
     // update users-student
 
-    public function importUpdateUsersFromCsv(Request $request)
-    {
+    public function importUpdateUsersFromCsv(Request $request) {
         set_time_limit(120);
         $request->validate([
             'csv_file' => 'required|file|mimes:csv,txt'
