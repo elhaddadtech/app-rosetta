@@ -13,11 +13,9 @@ return new class extends Migration
     {
         Schema::create('do_test', function (Blueprint $table) {
             $table->id();
-            $table->unsignedBigInteger('id_result'); // Clé étrangère vers la table Results
-            $table->unsignedBigInteger('id_student'); // Clé étrangère vers la table Student
             // Définition des relations (foreign keys)
-            $table->foreign('id_result')->references('id')->on('results')->onDelete('cascade');
-            $table->foreign('id_student')->references('id')->on('students')->onDelete('cascade');
+            $table->foreignId('result_id')->constrained()->onDelete('cascade');
+            $table->foreignId('student_id')->constrained()->onDelete('cascade');
             $table->string('year', 45); // Colonne 'Year', de type VARCHAR(45)
             $table->timestamps();
         });
