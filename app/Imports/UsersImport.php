@@ -2,8 +2,11 @@
 
 namespace App\Imports;
 
+use App\Models\Branche;
+use App\Models\Group;
 use App\Models\Institution;
 use App\Models\Role;
+use App\Models\Semester;
 use App\Models\Student;
 use App\Models\User;
 use Illuminate\Support\Collection;
@@ -14,32 +17,35 @@ use Validator;
 class UsersImport implements ToCollection, WithHeadingRow {
 
   public $errors = [];
+  public $count =0;
   public function collection(Collection $rows) {
     foreach ($rows as $index => $row) {
       //   dd($row->toArray());
       $validator = Validator::make($row->toArray(), [
         'last_name'     => 'required|alpha_num:ascii|string|max:255',
         'first_name'    => 'required|alpha_num:ascii|string|max:255',
-        'email'         => 'required|email|unique:users,email',
-        'cne'           => 'required|string|unique:students,cne',
-        'apogee'        => 'required|numeric|unique:students,apogee',
+        'email'         => 'required|email|regex:/^[a-zA-Z0-9._%+-]+@uca\.ac\.ma$/',
+        'cne'           => 'required|string',
+        'apogee'        => 'required|numeric',
         'institution'   => 'required|string|max:255',
         'role'          => 'required|string|max:255',
         'date_of_birth' => 'required|string|max:255',
-      ]);
-      $role    = Role::where('Libelle', strtolower($row['role']))->first();
-      $student = Student::where('cne', strtolower($row['cne']))->first();
 
-      if ($validator->fails() || !$role || $student) {
+      ], ['email.regex' => "Email {$row['email']} must be from the domain @uca.ac.ma."]);
+      // dd($validator->errors()->all());
+      $role = Role::where('Libelle', strtolower($row['role']))->first();
+      // $student = Student::where('cne', strtolower($row['cne']))->first(); || $student
+
+      if ($validator->fails() || !$role) {
         $errors = $validator->errors()->all();
 
         if (!$role) {
           $errors[] = "The Role {$row['role']} not found.";
         }
 
-        if (!$student) {
-          $errors[] ="The CNE {$row['cne']} is already registered.";
-        }
+        // if (!preg_match('/^[a-zA-Z0-9._%+-]+@uca\.ac\.ma$/', $row['email'])) {
+        //   $errors[] = "The Email {$row['email']} is invalid.";
+        // }
 
         $this->errors[] = [
           'row' => $index + 1 + 1, // extra +1 for heder row
@@ -52,8 +58,10 @@ class UsersImport implements ToCollection, WithHeadingRow {
     if (empty($this->errors)) {
       // Insert to database
       foreach ($rows as $row) {
-
-        $institution = Institution::firstOrCreate(['libelle' => strtolower($row['institution'])]);
+        $institution = Institution::updateOrCreate(['libelle' => strtolower($row['institution'])]);
+        $group       = strtolower($row['group']) != '' ? Group::updateOrCreate(['libelle' => strtolower($row['group'])])->id : null;
+        $branch      = strtolower($row['branch']) != '' ? Branche::updateOrCreate(['libelle' => strtolower($row['branch'])])->id : null;
+        $semester    = strtolower($row['semester']) != '' ? Semester::updateOrCreate(['libelle' => strtolower($row['semester'])])->id : null;
         // dd( $institution->id);
         $role = Role::where('Libelle', strtolower($row['role']))->first();
 
@@ -64,15 +72,22 @@ class UsersImport implements ToCollection, WithHeadingRow {
           'role_id'    => $role->id,
         ]);
 
-        $student = Student::firstOrCreate([
-          'cne' =>strtolower( $row['cne']),
-          'apogee'         => $row['apogee'],
-          'birthdate'=> $row['date_of_birth'],
-          'institution_id' => $institution->id,
-          'user_id'        => $user->id,
-        ]);
-      }
+        $student = Student::updateOrCreate(
+          [
+            'user_id' => $user->id,
+          ], [
+            'cne'            => strtolower($row['cne']),
+            'apogee'         => $row['apogee'],
+            'birthdate'      => $row['date_of_birth'],
+            'group_id'       => $group,
+            'branch_id'      => $branch,
+            'semester_id'    => $semester,
+            'institution_id' => $institution->id,
 
+          ]);
+      $this->count +=1;
+
+      }
     }
 
   }

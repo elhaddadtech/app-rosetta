@@ -21,7 +21,7 @@ class RoleController extends Controller
     public function store(Request $request)
     {
         $validated = $request->validate([
-            'Libelle' => 'required|unique:roles,Libelle|max:255',
+            'libelle' => 'required|unique:roles,Libelle|max:255',
         ]);
 
         $role = Role::create($validated);
@@ -42,7 +42,7 @@ class RoleController extends Controller
     public function update(Request $request, Role $role)
     {
         $validated = $request->validate([
-            'Libelle' => 'required|unique:roles,Libelle,' . $role->id . '|max:255',
+            'libelle' => 'required|unique:roles,Libelle,' . $role->id . '|max:255',
         ]);
 
         $role->update($validated);
@@ -54,7 +54,7 @@ class RoleController extends Controller
      */
     public function destroy($id)
     {
-        $role = Role::find($id); 
+        $role = Role::find($id);
 
         if (!$role) {
             return response()->json(['success' => false,"message" => "Role not found"], 404);
@@ -62,6 +62,6 @@ class RoleController extends Controller
 
         $role->delete();
         return response()->json(['success' => true,"message" => "Role deleted successfully"], 200);
-       
+
     }
 }

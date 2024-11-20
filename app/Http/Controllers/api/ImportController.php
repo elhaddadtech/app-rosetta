@@ -10,7 +10,7 @@ use Maatwebsite\Excel\Facades\Excel;
 
 class ImportController extends Controller {
 
-  public function importCSV(Request $request) {
+  public function importStudents(Request $request) {
     $file   = $request->file('csv_file');
     $import = new UsersImport();
 
@@ -24,6 +24,7 @@ class ImportController extends Controller {
     }
     return response()->json([
       'status'  => 'success',
+      "imported_users" => $import->count,
       'message' => 'CSV file imported successfully',
     ], 200);
 
