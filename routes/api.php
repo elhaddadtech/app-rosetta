@@ -1,6 +1,5 @@
 <?php
 
-use App\Http\Controllers\api\CsvUploadController;
 use App\Http\Controllers\api\GroupController;
 use App\Http\Controllers\api\ImportController;
 use App\Http\Controllers\api\LanguageController;
@@ -23,38 +22,6 @@ Route::apiResource('teachers', TeacherController::class);
 Route::post('/students/import', [ImportController::class, 'importStudents']);
 Route::post('/teachers/import', [TeacherController::class, 'importTeachers']);
 Route::post('/Groups/import', [GroupController::class, 'importGroups']);
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 // Route::get('/user', function (Request $request) {
 //     return $request->user();
