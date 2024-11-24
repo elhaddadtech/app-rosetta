@@ -18,6 +18,7 @@ return new class extends Migration
             $table->foreignId('student_id')->constrained()->onDelete('cascade');
             $table->year('year'); // Colonne 'Year', de type VARCHAR(45)
             $table->timestamps();
+            $table->softDeletes();
         });
     }
 

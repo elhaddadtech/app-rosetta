@@ -4,9 +4,10 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Result extends Model {
-  use HasFactory;
+  use HasFactory,SoftDeletes  ;
 
   protected $fillable = [
     'Test_1',
@@ -29,6 +30,7 @@ class Result extends Model {
   protected $hidden = [
     'created_at',
     'updated_at',
+    'deleted_at',
     'student',
     'language',
   ];

@@ -4,13 +4,11 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-
-// use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Student extends Model {
+  use HasFactory, SoftDeletes;
   protected $table = 'students';
-  use HasFactory;
-  //  SoftDeletes;
 
   protected $fillable = [
     'cne',
@@ -24,6 +22,11 @@ class Student extends Model {
     'user_id',
     'first_access',
     'last_access',
+  ];
+  protected $hidden = [
+    'deleted_at',
+    'create_at',
+    'update_at',
   ];
 
   public function group() {
