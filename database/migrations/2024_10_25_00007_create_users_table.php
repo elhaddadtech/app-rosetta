@@ -16,6 +16,7 @@ return new class extends Migration {
       $table->string('email', 100)->unique(); // Index unique pour l'email
       $table->foreignId('role_id')->nullable()->constrained()->onDelete('cascade');;
       $table->timestamps();
+      $table->softDeletes();
     });
 
     // Schema::create('password_reset_tokens', function (Blueprint $table) {

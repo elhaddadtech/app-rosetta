@@ -43,14 +43,15 @@ class TeacherController extends Controller {
     } else {
       return response()->json([
         'status'            => 'success',
-        'imported_teachers' => $import->count,
+        'imported_teachers' => $import->count-1,
         'message'           => 'CSV file imported successfully',
       ], 200);
 
     }
   }
   public function index() {
-    $teachers = Teacher::with(['group', 'branch', 'institution', 'user'])->get();
+    $teachers = Teacher::all();
+    // $teachers = Teacher::with(['group', 'branch', 'institution', 'user'])->get();
 
     return response()->json($teachers);
   }
@@ -96,7 +97,10 @@ class TeacherController extends Controller {
    * Show the form for editing the specified resource.
    */
   public function edit(string $id) {
-    //
+    $teacher = Teacher::findOrFail($id); //1
+    $teacher->load(['group', 'branch', 'institution', 'user']);
+    return response()->json($teacher);
+    // return view('teacher.edit', compact('teacher'));
   }
 
   /**

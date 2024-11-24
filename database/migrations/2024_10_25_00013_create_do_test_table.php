@@ -16,7 +16,7 @@ return new class extends Migration
             // Définition des relations (foreign keys)
             $table->foreignId('result_id')->constrained()->onDelete('cascade');
             $table->foreignId('student_id')->constrained()->onDelete('cascade');
-            $table->string('year', 45); // Colonne 'Year', de type VARCHAR(45)
+            $table->year('year'); // Colonne 'Year', de type VARCHAR(45)
             $table->timestamps();
         });
     }

@@ -23,6 +23,7 @@ return new class extends Migration {
       $table->date('first_access')->nullable();
       $table->date('last_access')->nullable();
       $table->timestamps();
+      $table->softDeletes();
     });
   }
 

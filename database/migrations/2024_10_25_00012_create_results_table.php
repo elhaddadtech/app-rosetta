@@ -29,6 +29,7 @@ return new class extends Migration {
       $table->foreignId('language_id')->constrained()->onDelete('cascade');
 
       $table->timestamps();
+      $table->softDeletes();
     });
   }
 

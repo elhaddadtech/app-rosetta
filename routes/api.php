@@ -1,10 +1,13 @@
 <?php
 
+use App\Http\Controllers\api\ChiefController;
 use App\Http\Controllers\api\GroupController;
 use App\Http\Controllers\api\ImportController;
 use App\Http\Controllers\api\LanguageController;
 use App\Http\Controllers\api\RegisterController;
+use App\Http\Controllers\api\ResultController;
 use App\Http\Controllers\api\RoleController;
+use App\Http\Controllers\api\SearchController;
 use App\Http\Controllers\api\TeacherController;
 use App\Http\Controllers\api\UserController;
 use Illuminate\Support\Facades\Route;
@@ -19,9 +22,13 @@ Route::apiResource('users', UserController::class);
 Route::apiResource('groups', GroupController::class);
 Route::apiResource('languages', LanguageController::class);
 Route::apiResource('teachers', TeacherController::class);
+Route::apiResource('chiefs', ChiefController::class);
+Route::apiResource('results', ResultController::class);
 Route::post('/students/import', [ImportController::class, 'importStudents']);
 Route::post('/teachers/import', [TeacherController::class, 'importTeachers']);
 Route::post('/Groups/import', [GroupController::class, 'importGroups']);
+//Search Api
+Route::post('search/user', [SearchController::class, 'searchStudents']);
 
 // Route::get('/user', function (Request $request) {
 //     return $request->user();
