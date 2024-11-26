@@ -16,8 +16,9 @@ Route::controller(RegisterController::class)->group(function () {
   Route::post('register', 'register');
   Route::post('login', 'login');
 });
-Route::middleware('auth:sanctum')->group(function () {});
+
 Route::apiResource('roles', RoleController::class);
+Route::middleware('auth:sanctum')->group(function () {});
 Route::apiResource('users', UserController::class);
 Route::apiResource('groups', GroupController::class);
 Route::apiResource('languages', LanguageController::class);

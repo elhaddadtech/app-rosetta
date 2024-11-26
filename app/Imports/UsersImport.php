@@ -17,16 +17,15 @@ use Validator;
 class UsersImport implements ToCollection, WithHeadingRow {
 
   public $errors = [];
-  public $count =0;
+  public $count  = 0;
   public function collection(Collection $rows) {
     foreach ($rows as $index => $row) {
       //   dd($row->toArray());
       $validator = Validator::make($row->toArray(), [
-        'last_name'     => 'required|alpha_num:ascii|string|max:255',
-        'first_name'    => 'required|alpha_num:ascii|string|max:255',
+        'last_name'     => 'required|string|max:255',
+        'first_name'    => 'required|string|max:255',
         'email'         => 'required|email|regex:/^[a-zA-Z0-9._%+-]+@uca\.ac\.ma$/',
         'cne'           => 'required|string',
-        'apogee'        => 'required|numeric',
         'institution'   => 'required|string|max:255',
         'role'          => 'required|string|max:255',
         'date_of_birth' => 'required|string|max:255',
@@ -85,7 +84,7 @@ class UsersImport implements ToCollection, WithHeadingRow {
             'institution_id' => $institution->id,
 
           ]);
-      $this->count +=1;
+        $this->count += 1;
 
       }
     }

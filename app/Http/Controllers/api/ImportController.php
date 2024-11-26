@@ -24,7 +24,7 @@ class ImportController extends Controller {
     }
     return response()->json([
       'status'  => 'success',
-      "imported_users" => $import->count -1,
+      "imported_users" => $import->count ,
       'message' => 'CSV file imported successfully',
     ], 200);
 
