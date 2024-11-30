@@ -22,10 +22,11 @@ class ImportController extends Controller {
         'errors' => $import->errors,
       ], 422);
     }
+
     return response()->json([
-      'status'  => 'success',
-      "imported_users" => $import->count ,
-      'message' => 'CSV file imported successfully',
+      'status'         => 'success',
+      'imported_users' => $import->count,
+      'message'        => 'CSV file imported successfully',
     ], 200);
 
   }
@@ -42,6 +43,7 @@ class ImportController extends Controller {
         'errors' => $import->errors,
       ], 422);
     }
+
     return response()->json([
       'status'  => 'success',
       'message' => 'CSV file updated successfully',

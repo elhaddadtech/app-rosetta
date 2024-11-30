@@ -12,7 +12,7 @@ return [
     | other UI elements where an application name needs to be displayed.
     |
     */
-
+    // 'memory_limit' => '1G',
     'name' => env('APP_NAME', 'Laravel'),
 
     /*
