@@ -2,13 +2,21 @@
 
 namespace App\Http\Controllers\api;
 
+use App\Exports\ExtractedDataExport;
 use App\Http\Controllers\Controller;
 // use App\Imports\UsersImport;
 use App\Http\Resources\UserResource;
 use App\Models\User;
 use Illuminate\Http\Request;
+use Maatwebsite\Excel\Excel;
 
 class UserController extends Controller {
+
+  public function export()
+    {
+      return Excel::download(new ExtractedDataExport, 'users.xlsx');
+    }
+
   public function index() {
     //   return User::with('role', 'student')->get()->map(function ($user) {
     //     $user->full_name; // Access the accessor

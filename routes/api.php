@@ -3,6 +3,7 @@
 use App\Http\Controllers\api\CatalystController;
 use App\Http\Controllers\api\ChiefController;
 use App\Http\Controllers\api\GroupController;
+use App\Http\Controllers\api\GrowthReportController;
 use App\Http\Controllers\api\ImportController;
 use App\Http\Controllers\api\LanguageController;
 use App\Http\Controllers\api\RegisterController;
@@ -31,7 +32,9 @@ Route::post('/teachers/import', [TeacherController::class, 'importTeachers']);
 Route::post('/Groups/import', [GroupController::class, 'importGroups']);
 //Search Api
 Route::post('search/user', [SearchController::class, 'searchStudents']);
-Route::post('catalyst', [CatalystController::class, 'import']);
+Route::post('import/growthReport', [GrowthReportController::class, 'import']);
+Route::post('test', [CatalystController::class,'paperInsert']);
+Route::get('users/export', [UserController::class, 'export']);
 // Route::get('/user', function (Request $request) {
 //     return $request->user();
 // })->middleware('auth:sanctum');

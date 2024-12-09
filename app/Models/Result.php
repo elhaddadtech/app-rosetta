@@ -7,23 +7,25 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Result extends Model {
-  use HasFactory,SoftDeletes  ;
+  use HasFactory, SoftDeletes;
 
   protected $fillable = [
-    'Test_1',
-    'Score_Test_1',
-    'Time_PC',
-    'Time_Mobile',
-    'Time_All',
-    'Activity',
-    'Pass_Score',
-    'Score_All',
-    'Test_2',
-    'Score_Test_2',
-    'Test_3',
-    'Score_Test_3',
-    'Test_4',
-    'Score_Test_4',
+    'type_test_1',
+    'date_test_1',
+    'score_test_1',
+    'level_test_1',
+    'desktop_time',
+    'mobile_time',
+    'test_Time_1',
+    'total_time',
+    'type_test_2',
+    'date_test_2',
+    'score_test_2',
+    'level_test_2',
+    'type_test_3',
+    'date_test_3',
+    'score_test_3',
+    'level_test_3',
     'student_id',
     'language_id',
   ];
@@ -67,6 +69,7 @@ class Result extends Model {
   }
   public function getGroupLibelleAttribute() {
     $user = $this->student?->group;
+
     return $user?->libelle;
   }
   public function getSemesterLibelleAttribute() {
@@ -91,8 +94,7 @@ class Result extends Model {
   public function language() {
     return $this->belongsTo(Language::class);
   }
-  public function doTests()
-  {
-      return $this->hasMany(DoTest::class);
+  public function doTests() {
+    return $this->hasMany(DoTest::class);
   }
 }

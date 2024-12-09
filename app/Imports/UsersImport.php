@@ -20,7 +20,6 @@ class UsersImport implements ToCollection, WithHeadingRow {
   public $count  = 0;
   public function collection(Collection $rows) {
     foreach ($rows as $index => $row) {
-        dd($row);
       $validator = Validator::make($row->toArray(), [
         'last_name'     => 'required|string|max:255',
         'first_name'    => 'required|string|max:255',

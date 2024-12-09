@@ -4,11 +4,7 @@ namespace App\Http\Controllers\api;
 
 use App\Http\Controllers\Controller;
 use App\Imports\CatalystImport;
-use App\Models\Language;
-use App\Models\Result;
-use DB;
 use Illuminate\Http\Request;
-use Illuminate\Support\LazyCollection;
 use Illuminate\Support\Str;
 use Maatwebsite\Excel\Facades\Excel;
 
@@ -64,8 +60,6 @@ class CatalystController extends Controller {
 
     return response()->json(['data' => $filter_language], 200);
   }
-
-
   private function processCSV($path) {
     $rows = [];
     if (($handle = fopen($path, 'r')) !== false) {
@@ -144,142 +138,91 @@ class CatalystController extends Controller {
     return array_values($filteredData);
   }
 
-  private function processLanguageData($recordsByEmail) {
-    // dd($recordsByEmail[0]);
-
-    return collect($recordsByEmail->groupBy('email'))->map(function ($records, $email) {
-      $totalSeconds = [
-        'total'   => 0,
-        'desktop' => 0,
-        'mobile'  => 0,
-        'test'    => 0,
-      ];
-
-      $finalScore = 0;
-      $finalLevel = '';
-
-      foreach ($records as $record) {
-        $currentScore = explode('/', $record['score_test_1'])[0];
-        if ($currentScore > $finalScore) {
-          $finalScore = $currentScore;
-          $finalLevel = $record['level_test_1'];
-        }
-
-        foreach (['total_time' => 'total', 'desktop_time' => 'desktop', 'mobile_time' => 'mobile', 'test_Time' => 'test'] as $field => $key) {
-          if (!empty($record[$field])) {
-            [$hours, $minutes, $seconds] = array_map('intval', explode(':', $record[$field]) + [0, 0, 0]);
-            $totalSeconds[$key] += ($hours * 3600) + ($minutes * 60) + $seconds;
-          }
-        }
-      }
-
-      $formattedTimes = collect($totalSeconds)->map(function ($seconds) {
-        return sprintf('%02d:%02d:%02d', floor($seconds / 3600), floor(($seconds % 3600) / 60), $seconds % 60);
-      });
-
-      return [
-        'full_name'    => $record['full_name'] ?? null,
-        'email'        => $email,
-        'group'        => $record['group'] ?? null,
-        'langue'       => $record['langue'] ?? null,
-        'type_test_1'  => $record['type_test_1'] ?? null,
-        'date_test_1'  => $record['date_test_1'] ?? null,
-        'score_test_1' => "{$finalScore}/400",
-        'level_test_1' => $finalLevel,
-        'desktop_time' => $formattedTimes['desktop'],
-        'mobile_time'  => $formattedTimes['mobile'],
-        'test_Time'    => $formattedTimes['test'],
-        'total_time'   => $formattedTimes['total'],
-        'type_test_2'  => $record['type_test_2'] ?? null,
-        'date_test_2'  => $record['date_test_2'] ?? null,
-        'score_test_2' => $record['score_test_2'] ?? null,
-        'level_test_2' => $record['level_test_2'] ?? null,
-        'type_test_3'  => $record['type_test_3'] ?? null,
-        'date_test_3'  => $record['date_test_3'] ?? null,
-        'score_test_3' => $record['score_test_3'] ?? null,
-        'level_test_3' => $record['level_test_3'] ?? null,
-      ];
-    });
-  }
-
   private function filterLanguage($data) {
+
     $groupedData = collect($data)->groupBy('langue');
 
-    $processedData = LazyCollection::make(function () use ($groupedData) {
-      foreach ($groupedData as $languageGroup) {
-        foreach ($this->processLanguageData($languageGroup) as $processed) {
-          yield $processed;
-        }
-      }
-    });
-    // dd($processedData);
+    // Fonction pour calculer les temps et formater les données
+    $processLanguageData = function ($recordsByEmail) {
+      return collect($recordsByEmail->groupBy('email'))->map(function ($records, $email) {
+        $totalSeconds = [
+          'total'   => 0,
+          'desktop' => 0,
+          'mobile'  => 0,
+          'test'    => 0,
+        ];
 
-    $batchInsertData = [];
+        $finalScore = 0;
+        $finalLevel = '';
+        $fullName   = '';
+        $group      = '';
+        $langue     = '';
 
-    foreach ($processedData as $data) {
-      if ($data['email'] == 'k.lamfichekh6986@uca.ac.ma' && $data['langue'] == 'English') {
-        dd($data);
-      }
-
-      // dd($data['langue']);
-      $result = DB::table('users')
-        ->join('students', 'users.id', '=', 'students.user_id')
-        ->select('students.id as student_id')
-        ->where('users.email', trim(strtolower($data['email'])))
-        ->first();
-
-      $langueId = !empty($data['langue'])
-      ? Language::updateOrCreate(['libelle' => strtolower($data['langue'])])->id
-      : null;
-      // dd($data);
-      $batchInsertData[] = [
-        'language_id'  => $langueId,
-        'student_id'   => $result->student_id ?? null,
-        'type_test_1'  => $data['type_test_1'],
-        'date_test_1'  => $data['date_test_1'],
-        'score_test_1' => $data['score_test_1'],
-        'level_test_1' => $data['level_test_1'],
-        'desktop_time' => $data['desktop_time'],
-        'mobile_time'  => $data['mobile_time'],
-        'test_Time_1'  => $data['test_Time'],
-        'total_time'   => $data['total_time'],
-        'type_test_2'  => $data['type_test_2'],
-        'date_test_2'  => $data['date_test_2'],
-        'score_test_2' => $data['score_test_2'],
-        'level_test_2' => $data['level_test_2'],
-        'type_test_3'  => $data['type_test_3'],
-        'date_test_3'  => $data['date_test_3'],
-        'score_test_3' => $data['score_test_3'],
-        'level_test_3' => $data['level_test_3'],
-      ];
-      // return $batchInsertData;
-      // Result::insert($batchInsertData);
-
-    }
-
-    DB::transaction(function () use ($batchInsertData) {
-      if (!empty($batchInsertData)) {
-          $chunks = array_chunk($batchInsertData, 1000);
-          foreach ($chunks as $chunk) {
-              Result::insert($chunk);
+        foreach ($records as $record) {
+          // Mise à jour du score et niveau
+          $currentScore = explode('/', $record['score_test_1'])[0];
+          if ($currentScore > $finalScore) {
+            $finalScore = $currentScore;
+            $finalLevel = $record['level_test_1'];
           }
-      }
-  });
-    // dd($batchInsertData);
-    // Batch insert
 
-    // return $batchInsertData;
+          // Calcul des temps pour chaque champ
+          foreach (['total_time' => 'total', 'desktop_time' => 'desktop', 'mobile_time' => 'mobile', 'test_Time' => 'test'] as $field => $key) {
+            if (!empty($record[$field])) {
+              [$hours, $minutes, $seconds] = array_map('intval', explode(':', $record[$field]) + [0, 0, 0]);
+              $totalSeconds[$key] += ($hours * 3600) + ($minutes * 60) + $seconds;
+            }
+          }
+        }
 
-    return response()->json([
-      'message' => 'Data inserted successfully',
-      'status'  => 'success',
-    ]);
+        // Convertir chaque temps total en format HH:mm:ss
+        $formattedTimes = collect($totalSeconds)->map(function ($seconds) {
+          return sprintf('%02d:%02d:%02d', floor($seconds / 3600), floor(($seconds % 3600) / 60), $seconds % 60);
+        });
+
+        return [
+          'full_name'    => $record['full_name'] ?? null,
+          'email'        => $email,
+          'group'        => $record['group'] ?? null,
+          'langue'       => $record['langue'] ?? null,
+          'type_test_1'  => $record['type_test_1'] ?? null,
+          'date_test_1'  =>$record['type_test_1'] ?? null,
+          'score_test_1' => "{$finalScore}/400",
+          'level_test_1' => $finalLevel,
+          'desktop_time' => $formattedTimes['desktop'],
+          'mobile_time'  => $formattedTimes['mobile'],
+          'test_Time'    => $formattedTimes['test'],
+          'total_time'   => $formattedTimes['total'],
+          'type_test_2'  => $record['type_test_2'] ?? null,
+          'date_test_2'  => $record['date_test_2'] ?? null,
+          'score_test_2' => $record['score_test_2'] ?? null,
+          'level_test_2' => $record['level_test_2'] ?? null,
+          'type_test_3'  => $record['type_test_3'] ?? null,
+          'date_test_3'  => $record['date_test_3'] ?? null,
+          'score_test_3' => $record['score_test_3'] ?? null,
+          'level_test_3' => $record['level_test_3'] ?? null,
+
+        ];
+      });
+    };
+
+    // Traiter toutes les langues
+    $processedData = $groupedData->map(function ($languageGroup) use ($processLanguageData) {
+      return $processLanguageData($languageGroup);
+    })->flatten(1);
+    // return  "ok2";
+
+    // Fusionner les résultats sans doublons par email
+    $mergedData = $processedData->unique('email')->values();
+
+    // Retourner les données mises à jour
+
+    return [
+      'languages_count' => $groupedData->count(),
+      'Data'            => $mergedData->count(),
+      'processed_data'  =>$processLanguageData,
+    ];
+
   }
 
-
-
-
-public function paperInsert(Request $request){
-  return $request->all();
-}
 }

@@ -1,0 +1,38 @@
+ {
+            "Full_name": "Faouzi Intissar",
+            "email": "i.faouzi8565@uca.ac.ma",
+            "group": "",
+            "langue": "French",
+            "product": "Fluency Builder",
+            "score1": "245/400",
+            "Level": "B2",
+            "desktop_time": "00:04:35",
+            "mobile_time": "",
+            "test_Time": "00:19:45",
+            "total_time": "00:24:20"
+        },
+        {
+            "Full_name": "AKHRAZ KHADIJA",
+            "email": "k.akhraz4503@uca.ac.ma",
+            "group": "",
+            "langue": "English",
+            "product": "Foundations",
+            "score1": "122/400",
+            "Level": "A1",
+            "desktop_time": "00:00:21",
+            "mobile_time": "00:01:25",
+            "test_Time": "00:05:20",
+            "total_time": "00:07:06"
+        }
+        {
+          "French": "222197:10:48",
+          "English": "232788:02:49",
+          "Spanish": "6180:51:46",
+          "Dutch": "15:09:27",
+          "Chinese": "32:59:01",
+          "German": "182:36:06",
+          "Italian": "14:55:11"
+      }
+
+
+      $grouped
