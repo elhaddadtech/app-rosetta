@@ -35,6 +35,8 @@ Route::post('search/user', [SearchController::class, 'searchStudents']);
 Route::post('import/growthReport', [GrowthReportController::class, 'import']);
 Route::post('test', [CatalystController::class,'paperInsert']);
 Route::get('users/export', [UserController::class, 'export']);
+
+Route::get('export',[GrowthReportController::class, 'ExportDataLearnerGrowth']);
 // Route::get('/user', function (Request $request) {
 //     return $request->user();
 // })->middleware('auth:sanctum');

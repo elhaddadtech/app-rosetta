@@ -1,49 +1,61 @@
 <?php
 
 namespace App\Http\Controllers\api;
-use App\Models\Language;
-use Illuminate\Support\LazyCollection;
 
+use App\Exports\LearnerGrowthExport;
 use App\Http\Controllers\Controller;
-use App\Jobs\ProcessCSVGrowthReportJob;
+use App\Models\Language;
 use App\Models\Result;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\LazyCollection;
 use Log;
+use Maatwebsite\Excel\Facades\Excel;
 use Str;
 
 class GrowthReportController extends Controller {
-  public function uploadCSV(Request $request) {
-    // 1. Validate the uploaded file
-    $request->validate([
-      'csv_file' => 'required|file|mimes:csv,txt',
-    ]);
+  public $fileName = false;
+  public $csvFile  = null;
+  public $learner = [];
 
-    // 2. Store the file
-    $fileName = $request->file('csv_file')->getClientOriginalName();
-    $filePath = $request->file('csv_file')->storeAs('csv_uploads', $fileName, 'public');
-    // $fileFullPath = storage_path('app/public/uploads/' . $fileName);
-    $fileFullPath = storage_path('app/public/' . $filePath);
-    ProcessCSVGrowthReportJob::dispatch($fileFullPath);
-    // exec('php artisan queue:work');
+  // public function uploadCSV(Request $request) {
+  //   // 1. Validate the uploaded file
+  //   $request->validate([
+  //     'csv_file' => 'required|file|mimes:csv,txt',
+  //   ]);
 
-    // 4. Respond to the user
+  //   // 2. Store the file
+  //   $fileName = $request->file('csv_file')->getClientOriginalName();
+  //   $filePath = $request->file('csv_file')->storeAs('csv_uploads', $fileName, 'public');
+  //   // $fileFullPath = storage_path('app/public/uploads/' . $fileName);
+  //   $fileFullPath = storage_path('app/public/' . $filePath);
+  //   ProcessCSVGrowthReportJob::dispatch($fileFullPath);
+  //   // exec('php artisan queue:work');
 
-    return response()->json(['message' => 'CSV file uploaded successfully. Data is being processed.']);
-  }
+  //   // 4. Respond to the user
 
+  //   return response()->json(['message' => 'CSV file uploaded successfully. Data is being processed.']);
+  // }
+
+
+
+
+
+    //LearnerGrowth methodes [import,processCSV,processLanguageData,handle]
   public function import(Request $request) {
-    $request->validate(['csv_file' => 'required|file|mimes:csv,txt',]);
-    $fileName = $request->file('csv_file')->getClientOriginalName();
-    $filePath = $request->file('csv_file')->storeAs('csv_uploads', $fileName, 'public');
+    $request->validate(['csv_file' => 'required|file|mimes:csv,txt']);
+    $fileName       = $request->file('csv_file')->getClientOriginalName();
+    $this->csvFile = strtolower($fileName);
+    $this->fileName = Result::where('file', strtolower($fileName))->exists();
+    // dd(strtolower($fileName));
+    $filePath     = $request->file('csv_file')->storeAs('csv_uploads', $fileName, 'public');
     $fileFullPath = storage_path('app/public/' . $filePath);
+    $handleLearnerGrowth = $this->handle($fileFullPath) ;
 
-    $this->handle($fileFullPath);
-    return response()->json(['message' => 'CSV file imported successfully.HH']);
-
+    if($handleLearnerGrowth == null) return response()->json(['message' => "CSV file {$this->csvFile} already imported"]);
+    return response()->json(['message' => 'CSV file {$this->csvFile} imported successfully.']);
 
   }
-
 
   private function processCSV($path) {
     if (!file_exists($path)) {
@@ -52,14 +64,18 @@ class GrowthReportController extends Controller {
       return [];
     }
 
-    $rows = [];
+    $rows           = [];
+    $desiredColumns = [3, 5, 8, 10, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28]; // Specify the indices of the columns you want to extract (e.g., column 0 and column 2)
+
     if (($handle = fopen($path, 'r')) !== false) {
       while (($data = fgetcsv($handle, 1000, ',')) !== false) {
-        $rows[] = $data;
+        // Extract only the columns you need
+        $filteredRow = array_intersect_key($data, array_flip($desiredColumns));
+        $rows[]      = $filteredRow;
       }
       fclose($handle);
     }
-dd($rows);
+
     $header = array_shift($rows);
     if (!$header) {
       Log::error('CSV file is empty or header is missing.');
@@ -68,10 +84,7 @@ dd($rows);
     }
 
     $indices = [
-      $nameIndex = array_search('Last Name', $header),
-      $prenomIndex = array_search('First Name', $header),
       $emailIndex = array_search('Email', $header),
-      $GroupIndex = array_search('Group(s)', $header),
       $LangueIndex = array_search('Language of Study', $header),
 
       $TypeTest1Index = array_search('Test 1 Type', $header),
@@ -124,6 +137,7 @@ dd($rows);
         'level_test_3' => isset($row[$TestLevel3Index]) ? $row[$TestLevel3Index] : null,
       ];
     }
+    // dd($header);
 
     return array_filter($extractedData, fn($data) => !empty($data['email']));
   }
@@ -187,9 +201,8 @@ dd($rows);
     // ini_set('max_execution_time', 100);
     try {
       Log::info("Job started for file: {$filePath}");
-        // dd($filePath);
+      // dd($filePath);
       $data = $this->processCSV($filePath);
-      // dd($data[0]);
       if (empty($data)) {
         Log::warning('No valid data found in the CSV file.');
 
@@ -205,21 +218,38 @@ dd($rows);
           }
         }
       });
+      // dd($processedData->first());
       $batchInsertData = [];
-      foreach ($processedData as $dataa) {
-        $result = DB::table('users')
-          ->join('students', 'users.id', '=', 'students.user_id')
-          ->select('students.id as student_id')
-          ->where('users.email', trim(strtolower($dataa['email'])))
-          ->first();
 
-        $langueId = !empty($dataa['langue'])
-        ? Language::updateOrCreate(['libelle' => strtolower($dataa['langue'])])->id
-        : null;
+      // Preload user-student mappings
+      $userStudentMap = DB::table('users')
+        ->join('students', 'users.id', '=', 'students.user_id')
+        ->select('users.email', 'students.id as student_id')
+        ->get()
+        ->mapWithKeys(function ($item) {
+          // dd($item->email);
+          return [strtolower(trim($item->email)) => $item->student_id];
+        });
+      // Preload existing languages
+      $existingLanguages = Language::pluck('id', 'libelle')->mapWithKeys(function ($value, $key) {
+        return [strtolower($key) => $value];
+      });
+
+      $newLanguages = [];
+
+      // Process data
+      foreach ($processedData as $dataa) {
+        $email     = strtolower(trim($dataa['email']));
+        $studentId = $userStudentMap[$email] ?? null;
+
+        $langue = strtolower($dataa['langue']);
+        if ($langue && !isset($existingLanguages[$langue])) {
+          $newLanguages[$langue] = null; // Mark for insertion
+        }
 
         $batchInsertData[] = [
-          'language_id'  => $langueId,
-          'student_id'   => $result->student_id ?? null,
+          'language_id'  => $langue && isset($existingLanguages[$langue]) ? $existingLanguages[$langue] : null,
+          'student_id'   => $studentId,
           'type_test_1'  => $dataa['type_test_1'],
           'date_test_1'  => $dataa['date_test_1'],
           'score_test_1' => $dataa['score_test_1'],
@@ -236,18 +266,44 @@ dd($rows);
           'date_test_3'  => $dataa['date_test_3'],
           'score_test_3' => $dataa['score_test_3'],
           'level_test_3' => $dataa['level_test_3'],
+          'file'         => $this->csvFile ,
         ];
-
       }
+
+      // Insert new languages (if any)
+      if (!empty($newLanguages)) {
+        foreach ($newLanguages as $langue => $id) {
+          $id                         = Language::create(['libelle' => $langue])->id;
+          $existingLanguages[$langue] = $id;
+        }
+
+        // Update batch data with new language IDs
+        foreach ($batchInsertData as &$data) {
+          $langue              = strtolower($processedData[$data['email']]['langue']);
+          $data['language_id'] = $existingLanguages[$langue] ?? null;
+        }
+      }
+
+      // Perform batch insert
       DB::transaction(function () use ($batchInsertData) {
-        if (!empty($batchInsertData)) {
-          $chunks = array_chunk($batchInsertData, 5000);
+        $maxPlaceholders = 65535;
+        $fieldsPerRow    = 22; // Adjust this to the actual number of fields you're inserting
+        $maxRows         = floor($maxPlaceholders / $fieldsPerRow);
+        $chunks          = array_chunk($batchInsertData, $maxRows);
+        $this->learner[] = $chunks;
+        file_put_contents(storage_path('learnerGrowth/failed_chunks.json'), json_encode($chunks));
+        // return Excel::download(new LearnerGrowthExport($chunks), "LearnerGrowthExcel.xlsx");
+        if ($this->fileName) {
+          return ;
+        } else {
           foreach ($chunks as $chunk) {
-            // Result::insert($chunk);
+            // Insert chunk if no file name condition is true
+            Result::insert($chunk);
           }
         }
       });
-      // dd("Successfully inserted");
+
+      // dd('Successfully inserted');
 
       Log::info('Data inserted successfully.1');
     } catch (\Exception $e) {
@@ -260,4 +316,18 @@ dd($rows);
     }
   }
 
+
+  public function ExportDataLearnerGrowth(){
+    $fileName = 'LearnerGrowthReport_' . now()->format('Y-m-d_H-i-s') . '.xlsx';
+    $filePath = 'exports/' . $fileName;
+
+    Excel::store(new LearnerGrowthExport, $filePath, 'public');
+
+    return response()->json([
+        'message' => 'Export successful',
+        'file_url' => asset('storage/' . $filePath),
+    ]);
+    //return Excel::download(new LearnerGrowthExport, 'LearnerGrowthReport.xlsx');
+
+  }
 }

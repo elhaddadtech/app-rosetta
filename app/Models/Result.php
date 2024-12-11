@@ -28,6 +28,7 @@ class Result extends Model {
     'level_test_3',
     'student_id',
     'language_id',
+    'file',
   ];
   protected $hidden = [
     'created_at',

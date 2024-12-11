@@ -13,7 +13,7 @@ use Illuminate\Support\Facades\DB;
 class ResultController extends Controller {
   public function index() {
     // Fetch all results with student and language relations
-    return response()->json(Result::all());
+    return response()->json(Result::paginate(1000));
   }
 
   public function store(Request $request) {

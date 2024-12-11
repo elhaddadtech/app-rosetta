@@ -36,6 +36,7 @@ return new class extends Migration {
       $table->foreignId('student_id')->constrained()->onDelete('cascade');
       $table->foreignId('language_id')->constrained()->onDelete('cascade');
 
+      $table->string('file', 45)->nullable();
       $table->timestamps();
       $table->softDeletes();
     });
