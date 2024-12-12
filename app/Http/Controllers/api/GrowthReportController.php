@@ -318,16 +318,7 @@ class GrowthReportController extends Controller {
 
 
   public function ExportDataLearnerGrowth(){
-    $fileName = 'LearnerGrowthReport_' . now()->format('Y-m-d_H-i-s') . '.xlsx';
-    $filePath = 'exports/' . $fileName;
-
-    Excel::store(new LearnerGrowthExport, $filePath, 'public');
-
-    return response()->json([
-        'message' => 'Export successful',
-        'file_url' => asset('storage/' . $filePath),
-    ]);
-    //return Excel::download(new LearnerGrowthExport, 'LearnerGrowthReport.xlsx');
+    return Excel::download(new LearnerGrowthExport, 'LearnerGrowthReport.xlsx');
 
   }
 }

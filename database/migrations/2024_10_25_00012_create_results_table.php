@@ -11,7 +11,7 @@ return new class extends Migration {
 
   public function up(): void {
     Schema::create('results', function (Blueprint $table) {
-      $table->id();
+      $table->id(); // Primary key
       $table->string('type_test_1', 45);
       $table->string('date_test_1', 45);
       $table->string('score_test_1', 45);
@@ -23,23 +23,25 @@ return new class extends Migration {
       $table->string('total_time', 45);
       $table->string('type_test_2', 45)->nullable();
       $table->string('date_test_2', 45)->nullable();
-      $table->string('score_test_2', 45)->nullable();;
-      $table->string('level_test_2', 45)->nullable();;
+      $table->string('score_test_2', 45)->nullable();
+      $table->string('level_test_2', 45)->nullable();
       $table->string('type_test_3', 45)->nullable();
       $table->string('date_test_3', 45)->nullable();
-      $table->string('score_test_3', 45)->nullable();;
-      $table->string('level_test_3', 45)->nullable();;
+      $table->string('score_test_3', 45)->nullable();
+      $table->string('level_test_3', 45)->nullable();
       $table->string('activity', 45)->nullable();
       $table->string('pass_score', 45)->nullable();
       $table->string('total_score', 45)->nullable();
 
+      // Foreign keys
       $table->foreignId('student_id')->constrained()->onDelete('cascade');
       $table->foreignId('language_id')->constrained()->onDelete('cascade');
 
-      $table->string('file', 45)->nullable();
-      $table->timestamps();
-      $table->softDeletes();
+      $table->string('file', 45)->nullable(); // For file tracking
+      $table->timestamps(); // created_at and updated_at
+      $table->softDeletes(); // deleted_at for soft deletes
     });
+
   }
 
   /**

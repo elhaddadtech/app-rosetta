@@ -8,6 +8,7 @@ use App\Http\Controllers\api\ImportController;
 use App\Http\Controllers\api\LanguageController;
 use App\Http\Controllers\api\RegisterController;
 use App\Http\Controllers\api\ResultController;
+use App\Http\Controllers\api\ResultsStatsControler;
 use App\Http\Controllers\api\RoleController;
 use App\Http\Controllers\api\SearchController;
 use App\Http\Controllers\api\TeacherController;
@@ -33,10 +34,13 @@ Route::post('/Groups/import', [GroupController::class, 'importGroups']);
 //Search Api
 Route::post('search/user', [SearchController::class, 'searchStudents']);
 Route::post('import/growthReport', [GrowthReportController::class, 'import']);
-Route::post('test', [CatalystController::class,'paperInsert']);
+Route::post('test', [CatalystController::class, 'paperInsert']);
 Route::get('users/export', [UserController::class, 'export']);
 
-Route::get('export',[GrowthReportController::class, 'ExportDataLearnerGrowth']);
+Route::get('lernerGrowth/export', [GrowthReportController::class, 'ExportDataLearnerGrowth']);
+
+// --------------Results_Stats --------------------------------
+Route::get('learnerGrowth/stats', [ResultsStatsControler::class, 'ResultStats']);
 // Route::get('/user', function (Request $request) {
 //     return $request->user();
 // })->middleware('auth:sanctum');
