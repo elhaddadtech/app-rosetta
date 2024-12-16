@@ -37,7 +37,7 @@ Route::post('import/growthReport', [GrowthReportController::class, 'import']);
 Route::post('test', [CatalystController::class, 'paperInsert']);
 Route::get('users/export', [UserController::class, 'export']);
 
-Route::get('lernerGrowth/export', [GrowthReportController::class, 'ExportDataLearnerGrowth']);
+Route::get('learnerGrowth/export', [GrowthReportController::class, 'ExportDataLearnerGrowth']);
 
 // --------------Results_Stats --------------------------------
 Route::get('learnerGrowth/stats', [ResultsStatsControler::class, 'ResultStats']);

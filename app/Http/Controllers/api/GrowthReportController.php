@@ -14,9 +14,10 @@ use Maatwebsite\Excel\Facades\Excel;
 use Str;
 
 class GrowthReportController extends Controller {
-  public $fileName = false;
-  public $csvFile  = null;
-  public $learner = [];
+  public $fileName  = false;
+  public $csvFile   = null;
+  public $learner   = [];
+  public $usersNull = [];
 
   // public function uploadCSV(Request $request) {
   //   // 1. Validate the uploaded file
@@ -37,22 +38,27 @@ class GrowthReportController extends Controller {
   //   return response()->json(['message' => 'CSV file uploaded successfully. Data is being processed.']);
   // }
 
-
-
-
-
-    //LearnerGrowth methodes [import,processCSV,processLanguageData,handle]
+  //LearnerGrowth methodes [import,processCSV,processLanguageData,handle]
   public function import(Request $request) {
     $request->validate(['csv_file' => 'required|file|mimes:csv,txt']);
     $fileName       = $request->file('csv_file')->getClientOriginalName();
-    $this->csvFile = strtolower($fileName);
+    $this->csvFile  = strtolower($fileName);
     $this->fileName = Result::where('file', strtolower($fileName))->exists();
     // dd(strtolower($fileName));
-    $filePath     = $request->file('csv_file')->storeAs('csv_uploads', $fileName, 'public');
-    $fileFullPath = storage_path('app/public/' . $filePath);
-    $handleLearnerGrowth = $this->handle($fileFullPath) ;
+    $filePath            = $request->file('csv_file')->storeAs('csv_uploads', $fileName, 'public');
+    $fileFullPath        = storage_path('app/public/' . $filePath);
+    $handleLearnerGrowth = $this->handle($fileFullPath);
+    if (count($this->usersNull) > 0) {
+      return response()->json([
+        'message'     => 'some students do not exist in our database',
+        'nb_students' => count($this->usersNull),
+        'students'    => $this->usersNull,
+      ]);
+    };
+    if ($handleLearnerGrowth == null) {
+      return response()->json(['message' => "CSV file {$this->csvFile} already imported"]);
+    }
 
-    if($handleLearnerGrowth == null) return response()->json(['message' => "CSV file {$this->csvFile} already imported"]);
     return response()->json(['message' => 'CSV file {$this->csvFile} imported successfully.']);
 
   }
@@ -236,12 +242,17 @@ class GrowthReportController extends Controller {
       });
 
       $newLanguages = [];
-
       // Process data
       foreach ($processedData as $dataa) {
-        $email     = strtolower(trim($dataa['email']));
-        $studentId = $userStudentMap[$email] ?? null;
+        $email = strtolower(trim($dataa['email']));
 
+        $studentId = $userStudentMap[$email] ?? null;
+        // dd($email);
+        if ($studentId == null) {
+          $this->usersNull[] = $email;
+          Log::warning("Student ID not found for email: $email");
+          continue;
+        }
         $langue = strtolower($dataa['langue']);
         if ($langue && !isset($existingLanguages[$langue])) {
           $newLanguages[$langue] = null; // Mark for insertion
@@ -266,7 +277,7 @@ class GrowthReportController extends Controller {
           'date_test_3'  => $dataa['date_test_3'],
           'score_test_3' => $dataa['score_test_3'],
           'level_test_3' => $dataa['level_test_3'],
-          'file'         => $this->csvFile ,
+          'file'         => $this->csvFile,
         ];
       }
 
@@ -294,12 +305,18 @@ class GrowthReportController extends Controller {
         file_put_contents(storage_path('learnerGrowth/failed_chunks.json'), json_encode($chunks));
         // return Excel::download(new LearnerGrowthExport($chunks), "LearnerGrowthExcel.xlsx");
         if ($this->fileName) {
-          return ;
+          return;
         } else {
-          foreach ($chunks as $chunk) {
-            // Insert chunk if no file name condition is true
-            Result::insert($chunk);
+          if (count($this->usersNull) == 0) {
+            foreach ($chunks as $chunk) {
+              // Insert chunk if no file name condition is true
+              Result::insert($chunk);
+            }
+
+          } else {
+            return 'error';
           }
+
         }
       });
 
@@ -316,8 +333,7 @@ class GrowthReportController extends Controller {
     }
   }
 
-
-  public function ExportDataLearnerGrowth(){
+  public function ExportDataLearnerGrowth() {
     return Excel::download(new LearnerGrowthExport, 'LearnerGrowthReport.xlsx');
 
   }
