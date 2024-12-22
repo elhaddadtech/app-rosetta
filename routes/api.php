@@ -1,6 +1,6 @@
 <?php
 
-use App\Http\Controllers\api\CatalystController;
+use App\Http\Controllers\api\BuilderController;
 use App\Http\Controllers\api\ChiefController;
 use App\Http\Controllers\api\GroupController;
 use App\Http\Controllers\api\GrowthReportController;
@@ -34,7 +34,10 @@ Route::post('/Groups/import', [GroupController::class, 'importGroups']);
 //Search Api
 Route::post('search/user', [SearchController::class, 'searchStudents']);
 Route::post('import/growthReport', [GrowthReportController::class, 'import']);
-Route::post('test', [CatalystController::class, 'paperInsert']);
+Route::post('import/builderReport', [BuilderController::class, 'impocrtBuilderCSV']);
+
+Route::get('export/builderReport', [BuilderController::class, 'exportToExcel']);
+// Route::post('test', [CatalystController::class, 'paperInsert']);
 Route::get('users/export', [UserController::class, 'export']);
 
 Route::get('learnerGrowth/export', [GrowthReportController::class, 'ExportDataLearnerGrowth']);

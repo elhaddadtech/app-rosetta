@@ -224,7 +224,6 @@ class GrowthReportController extends Controller {
           }
         }
       });
-      // dd($processedData->first());
       $batchInsertData = [];
 
       // Preload user-student mappings
