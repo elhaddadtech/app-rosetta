@@ -13,53 +13,33 @@ use Log;
 use Maatwebsite\Excel\Facades\Excel;
 use Str;
 
-class GrowthReportController extends Controller {
+class LeanerGrowthReportController extends Controller {
   public $fileName  = false;
   public $csvFile   = null;
   public $learner   = [];
   public $usersNull = [];
 
-  // public function uploadCSV(Request $request) {
-  //   // 1. Validate the uploaded file
-  //   $request->validate([
-  //     'csv_file' => 'required|file|mimes:csv,txt',
-  //   ]);
-
-  //   // 2. Store the file
-  //   $fileName = $request->file('csv_file')->getClientOriginalName();
-  //   $filePath = $request->file('csv_file')->storeAs('csv_uploads', $fileName, 'public');
-  //   // $fileFullPath = storage_path('app/public/uploads/' . $fileName);
-  //   $fileFullPath = storage_path('app/public/' . $filePath);
-  //   ProcessCSVGrowthReportJob::dispatch($fileFullPath);
-  //   // exec('php artisan queue:work');
-
-  //   // 4. Respond to the user
-
-  //   return response()->json(['message' => 'CSV file uploaded successfully. Data is being processed.']);
-  // }
-
-  //LearnerGrowth methodes [import,processCSV,processLanguageData,handle]
-  public function import(Request $request) {
+  public function importGrowthCSV(Request $request) {
     $request->validate(['csv_file' => 'required|file|mimes:csv,txt']);
-    $fileName       = $request->file('csv_file')->getClientOriginalName();
-    $this->csvFile  = strtolower($fileName);
-    $this->fileName = Result::where('file', strtolower($fileName))->exists();
-    // dd(strtolower($fileName));
-    $filePath            = $request->file('csv_file')->storeAs('csv_uploads', $fileName, 'public');
-    $fileFullPath        = storage_path('app/public/' . $filePath);
-    $handleLearnerGrowth = $this->handle($fileFullPath);
-    if (count($this->usersNull) > 0) {
-      return response()->json([
-        'message'     => 'some students do not exist in our database',
-        'nb_students' => count($this->usersNull),
-        'students'    => $this->usersNull,
-      ]);
-    };
-    if ($handleLearnerGrowth == null) {
-      return response()->json(['message' => "CSV file {$this->csvFile} already imported"]);
-    }
+    $fileName = $request->file('csv_file')->getClientOriginalName();
 
-    return response()->json(['message' => 'CSV file {$this->csvFile} imported successfully.']);
+    // dd(strtolower($fileName));
+    $filePath     = $request->file('csv_file')->storeAs('csv_uploads', $fileName, 'public');
+    $fileFullPath = storage_path('app/public/' . $filePath);
+
+    return response()->json(['message' => 'CSV file {$this->csvFile} imported successfully.', 'path' => $fileFullPath]);
+
+    // $handleLearnerGrowth = $this->handle($fileFullPath);
+    // if (count($this->usersNull) > 0) {
+    //   return response()->json([
+    //     'message'     => 'some students do not exist in our database',
+    //     'nb_students' => count($this->usersNull),
+    //     'students'    => $this->usersNull,
+    //   ]);
+    // };
+    // if ($handleLearnerGrowth == null) {
+    //   return response()->json(['message' => "CSV file {$this->csvFile} already imported"]);
+    // }
 
   }
 
@@ -124,7 +104,7 @@ class GrowthReportController extends Controller {
     $extractedData = [];
     foreach ($rows as $row) {
       $extractedData[] = [
-        'email'        => isset($row[$emailIndex]) ? $row[$emailIndex] : null,
+        'email'        => isset($row[$emailIndex]) && Str::endsWith($row[$emailIndex], '@uca.ac.ma') ? $row[$emailIndex] : null,
         'langue'       => isset($row[$LangueIndex]) && Str::contains($row[$LangueIndex], '(') ? trim(Str::before($row[$LangueIndex], '(')) : (isset($row[$LangueIndex]) ? trim($row[$LangueIndex]) : ''),
         'type_test_1'  => isset($row[$TypeTest1Index]) ? $row[$TypeTest1Index] : null,
         'date_test_1'  => isset($row[$DateTest1Index]) ? $row[$DateTest1Index] : null,
@@ -203,12 +183,21 @@ class GrowthReportController extends Controller {
     });
   }
 
-  public function handle($filePath) {
+  public function handle(Request $request) {
     // ini_set('max_execution_time', 100);
+    $request->validate(['csv_path' => 'required']);
+    $file = pathinfo($request->csv_path, PATHINFO_BASENAME);
+
+    $this->csvFile  = strtolower($file);
+    $this->fileName = Result::where('file', strtolower($file))->exists();
+    if ($this->fileName) {
+      return response()->json(['message' => "CSV file {$file} already imported."]);
+
+    }
     try {
-      Log::info("Job started for file: {$filePath}");
+      Log::info('Job started for file: {}');
       // dd($filePath);
-      $data = $this->processCSV($filePath);
+      $data = $this->processCSV($request->csv_path);
       if (empty($data)) {
         Log::warning('No valid data found in the CSV file.');
 
@@ -303,26 +292,26 @@ class GrowthReportController extends Controller {
         $this->learner[] = $chunks;
         file_put_contents(storage_path('learnerGrowth/failed_chunks.json'), json_encode($chunks));
         // return Excel::download(new LearnerGrowthExport($chunks), "LearnerGrowthExcel.xlsx");
-        if ($this->fileName) {
-          return;
-        } else {
-          if (count($this->usersNull) == 0) {
-            foreach ($chunks as $chunk) {
-              // Insert chunk if no file name condition is true
-              Result::insert($chunk);
-            }
 
-          } else {
-            return 'error';
+        if (count($this->usersNull) == 0) {
+          foreach ($chunks as $chunk) {
+            // Insert chunk if no file name condition is true
+            Result::insert($chunk);
           }
 
         }
+
       });
 
-      // dd('Successfully inserted');
+      if (count($this->usersNull) > 0) {
+        return response()->json([
+          'message'     => 'some students do not exist in our database',
+          'nb_students' => count($this->usersNull),
+          'students'    => $this->usersNull,
+        ]);
+      };
 
-      Log::info('Data inserted successfully.1');
-    } catch (\Exception $e) {
+      return response()->json(['message' => "CSV file {$file} imported successfully."]);
       Log::error("Job failed with exception: {$e->getMessage()}", [
         'file'  => $e->getFile(),
         'line'  => $e->getLine(),

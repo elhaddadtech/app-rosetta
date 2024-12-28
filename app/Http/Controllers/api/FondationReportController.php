@@ -2,17 +2,16 @@
 
 namespace App\Http\Controllers\api;
 
-use App\Exports\BuilderResultExport;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use Log;
-use Maatwebsite\Excel\Facades\Excel;
 use Str;
 
-class BuilderController extends Controller {
+class FondationReportController extends Controller {
   public $dataExcel = [];
-  public function impocrtBuilderCSV(Request $request) {
+  public function importFondationCSV(Request $request) {
     $request->validate(['csv_file' => 'required|file|mimes:csv,txt']);
+
     $fileName     = $request->file('csv_file')->getClientOriginalName();
     $filePath     = $request->file('csv_file')->storeAs('csv_uploads', $fileName, 'public');
     $fileFullPath = storage_path('app/public/' . $filePath);
@@ -20,20 +19,10 @@ class BuilderController extends Controller {
 
     return response()->json(['message' => "CSV file {$file} imported successfully.", 'path' => $fileFullPath]);
 
-    // $hna          = "C:\Users\Admin\Documents\app-rosetta\storage\app/public/csv_uploads/FluencyBuilderLessonDetailReport.2024-09-04-2024-12-25.csv";
-
   }
 
   public function handle(Request $request) {
     $request->validate(['csv_path' => 'required']);
-    // $file = pathinfo($request->csv_path, PATHINFO_BASENAME);
-    // $this->csvFile  = strtolower($file);
-    // $this->fileName = Result::where('file', strtolower($file))->exists();
-    // if ($this->fileName) {
-    //   return response()->json(['message' => "CSV file {$file} already imported."]);
-
-    // }
-    // $hna = "C:\Users\Admin\Documents\app-rosetta\storage\app/public/csv_uploads/FluencyBuilderLessonDetailReport.2024-09-04-2024-12-25.csv";
     try {
       Log::info("Job started for file: {$request->csv_path}");
       // dd($filePath);
@@ -59,7 +48,8 @@ class BuilderController extends Controller {
                 'cours_progress' => $lessons->pluck('cours_progress')->unique()->values()[0], // Collect unique progress values
                 'cours_grade' => $lessons->pluck('cours_grade')->unique()->values()[0], // Collect unique grade values
                 'cours_name' => $coursName,
-                'total_lessons'  => $lessons->pluck('lesson_name')->unique()->count(),
+                'total_lessons'  => null,
+                // 'total_lessons'  => $lessons->pluck('lesson_name')->unique()->count(),
               ];
             })->values(), // Structure propre pour 'cours'
           ];
@@ -99,21 +89,27 @@ class BuilderController extends Controller {
 
       return [];
     }
-
+    // dd($path);
     $rows           = [];
-    $desiredColumns = [3, 5, 8, 9, 11, 12]; // Specify the indices of the columns you want to extract (e.g., column 0 and column 2)
+    $desiredColumns = [2, 8, 9, 10, 11]; // Specify the indices of the columns you want to extract
 
     if (($handle = fopen($path, 'r')) !== false) {
+      // Skip the first line (header row)
+      fgetcsv($handle, 1000, ',');
+
+      // Now process the remaining rows
       while (($data = fgetcsv($handle, 1000, ',')) !== false) {
-        // Extract only the columns you need
-        $filteredRow = array_intersect_key($data, array_flip($desiredColumns));
-        $rows[]      = $filteredRow;
+        if (!empty($data)) {
+          // Extract only the columns you need
+          $filteredRow = array_intersect_key($data, array_flip($desiredColumns));
+          $rows[]      = $filteredRow;
+        }
       }
       fclose($handle);
     }
-
     $header = array_shift($rows);
-    // dd($rows);
+    // Output the rows (you can use dd() for debugging or return them)
+    // dd($header);
     if (!$header) {
       Log::error('CSV file is empty or header is missing.');
 
@@ -122,12 +118,12 @@ class BuilderController extends Controller {
 
     $indices = [
       $emailIndex = array_search('Email', $header),
-      $LangueIndex = array_search('Language of Study', $header),
+      $LangueIndex = array_search('Language Level', $header),
 
-      $CoursNameIndex = array_search('Course Name', $header),
-      $CoursProgressIndex = array_search('Course Progress', $header),
-      $CoursGradeIndex = array_search('Course Grade', $header),
-      $LessonNameIndex = array_search('Lesson Name', $header),
+      $CoursNameIndex = array_search('Language Level', $header),
+      $CoursProgressIndex = array_search('Progress', $header),
+      $CoursGradeIndex = array_search('Overall Score', $header),
+      $LessonNameIndex = array_search('Current Activity', $header),
     ];
 
     $missingHeaders = array_filter($indices, fn($index) => $index === false);
@@ -138,27 +134,25 @@ class BuilderController extends Controller {
     }
 
     $extractedData = [];
+
     foreach ($rows as $row) {
       $extractedData[] = [
-        'email'          => isset($row[$emailIndex]) && Str::endsWith($row[$emailIndex], '@uca.ac.ma') ? $row[$emailIndex] : null,
-        'langue'         => isset($row[$LangueIndex]) && Str::contains($row[$LangueIndex], '(') ? trim(Str::before($row[$LangueIndex], '(')) : (isset($row[$LangueIndex]) ? trim($row[$LangueIndex]) : ''),
-        'cours_name'     => isset($row[$CoursNameIndex]) ? $row[$CoursNameIndex] : null,
+        'email'          => isset($row[$emailIndex]) ? $row[$emailIndex] : null,
+        'langue'         => isset($row[$LangueIndex]) && Str::contains($row[$LangueIndex], ' ')
+        ? trim(Str::before($row[$LangueIndex], ' '))
+        : (isset($row[$LangueIndex]) ? trim($row[$LangueIndex]) : ''),
+        'cours_name'     => isset($row[$LangueIndex])
+        ? implode(' ', array_slice(explode(' ', $row[$LangueIndex]), -2)) // Get last two words
+        : '',
         'cours_progress' => isset($row[$CoursProgressIndex]) ? $row[$CoursProgressIndex] : null,
         'cours_grade'    => isset($row[$CoursGradeIndex]) ? $row[$CoursGradeIndex] : null,
         'lesson_name'    => isset($row[$LessonNameIndex]) ? $row[$LessonNameIndex] : null,
-
       ];
     }
+
     // dd($extractedData);
 
-    return array_filter($extractedData, fn($data) => !empty($data['email']));
-  }
-
-  public function exportToExcel() {
-    $fileName = 'data_builder.xlsx';
-
-    return Excel::download(new BuilderResultExport, $fileName);
-    // return Excel::download(new BuilderResultExport($data), 'grouped_data.xlsx');
+    return (array_filter($extractedData, fn($data) => !empty($data['email'])));
   }
 
 }
