@@ -2,9 +2,10 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Factories\HasFactory;
+use App\Models\Course;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 
 class Result extends Model {
   use HasFactory, SoftDeletes;
@@ -98,4 +99,10 @@ class Result extends Model {
   public function doTests() {
     return $this->hasMany(DoTest::class);
   }
+
+  public function courses()
+    {
+        return $this->hasMany(Course::class, 'result_id');
+    }
+
 }

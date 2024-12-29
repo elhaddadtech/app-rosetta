@@ -272,7 +272,7 @@ class LeanerGrowthReportController extends Controller {
       // Insert new languages (if any)
       if (!empty($newLanguages)) {
         foreach ($newLanguages as $langue => $id) {
-          $id                         = Language::create(['libelle' => $langue])->id;
+          $id                         = Language::create(['libelle' => strtolower($langue)])->id;
           $existingLanguages[$langue] = $id;
         }
 
@@ -312,6 +312,7 @@ class LeanerGrowthReportController extends Controller {
       };
 
       return response()->json(['message' => "CSV file {$file} imported successfully."]);
+    } catch (\Exception $e) {
       Log::error("Job failed with exception: {$e->getMessage()}", [
         'file'  => $e->getFile(),
         'line'  => $e->getLine(),
