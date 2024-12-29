@@ -28,6 +28,7 @@ class BuilderController extends Controller {
   }
 
   public function handle(Request $request) {
+    set_time_limit(300);
     // Validate the incoming request to ensure the CSV path is provided
     $request->validate(['csv_path' => 'required']);
     // Get the basename (filename with extension)

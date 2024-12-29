@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\api\BuilderController;
 use App\Http\Controllers\api\ChiefController;
+use App\Http\Controllers\api\CoursController;
 use App\Http\Controllers\api\FondationReportController;
 use App\Http\Controllers\api\GroupController;
 use App\Http\Controllers\api\GrowthReportController;
@@ -50,6 +51,9 @@ Route::get('export/builderReport', [BuilderController::class, 'exportToExcel']);
 Route::get('users/export', [UserController::class, 'export']);
 
 Route::get('learnerGrowth/export', [GrowthReportController::class, 'ExportDataLearnerGrowth']);
+
+//Coures controller
+Route::apiResource('courses', CoursController::class);
 
 // --------------Results_Stats --------------------------------
 Route::get('learnerGrowth/stats', [ResultsStatsControler::class, 'ResultStats']);
