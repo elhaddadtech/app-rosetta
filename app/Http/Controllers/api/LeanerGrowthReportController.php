@@ -20,6 +20,7 @@ class LeanerGrowthReportController extends Controller {
   public $usersNull = [];
 
   public function importGrowthCSV(Request $request) {
+
     $request->validate(['csv_file' => 'required|file|mimes:csv,txt']);
     $fileName = $request->file('csv_file')->getClientOriginalName();
 
@@ -27,7 +28,7 @@ class LeanerGrowthReportController extends Controller {
     $filePath     = $request->file('csv_file')->storeAs('csv_uploads', $fileName, 'public');
     $fileFullPath = storage_path('app/public/' . $filePath);
 
-    return response()->json(['message' => 'CSV file {$this->csvFile} imported successfully.', 'path' => $fileFullPath]);
+    return response()->json(['message' => "CSV file {$this->csvFile} imported successfully.", 'path' => $fileFullPath]);
 
     // $handleLearnerGrowth = $this->handle($fileFullPath);
     // if (count($this->usersNull) > 0) {
