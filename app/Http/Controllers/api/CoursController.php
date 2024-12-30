@@ -34,6 +34,7 @@ class CoursController extends Controller {
       ->join('users', 'students.user_id', '=', 'users.id')
       ->join('languages', 'languages.id', '=', 'results.language_id') // Join the languages table
       ->where('users.email', trim(strtolower($id)))
+
       ->select('courses.*', 'results.score_test_1', 'results.level_test_1', 'results.total_time', 'languages.libelle as langue') // Select all columns from courses and the langue (libelle) from languages
       ->get()->groupBy('file');
 
