@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\api;
 
 use App\Exports\LearnerGrowthExport;
+use App\Exports\ResultsExport;
 use App\Http\Controllers\Controller;
 use App\Models\Language;
 use App\Models\Result;
@@ -14,7 +15,8 @@ use Maatwebsite\Excel\Facades\Excel;
 use Str;
 
 class LeanerGrowthReportController extends Controller {
-  public $fileName  = false;
+  public $fileName = '';
+
   public $csvFile   = null;
   public $learner   = [];
   public $usersNull = [];
@@ -29,18 +31,6 @@ class LeanerGrowthReportController extends Controller {
     $fileFullPath = storage_path('app/public/' . $filePath);
 
     return response()->json(['message' => "CSV file {$this->csvFile} imported successfully.", 'path' => $fileFullPath]);
-
-    // $handleLearnerGrowth = $this->handle($fileFullPath);
-    // if (count($this->usersNull) > 0) {
-    //   return response()->json([
-    //     'message'     => 'some students do not exist in our database',
-    //     'nb_students' => count($this->usersNull),
-    //     'students'    => $this->usersNull,
-    //   ]);
-    // };
-    // if ($handleLearnerGrowth == null) {
-    //   return response()->json(['message' => "CSV file {$this->csvFile} already imported"]);
-    // }
 
   }
 
@@ -93,6 +83,11 @@ class LeanerGrowthReportController extends Controller {
       $DateTest3Index = array_search('Test 3 Date', $header),
       $Score3Index = array_search('Test 3 Scaled Score', $header),
       $TestLevel3Index = array_search('Test 3 CEFR Level', $header),
+
+      // $TypeTest4Index = array_search('Test 4 Type', $header),
+      // $DateTest4Index = array_search('Test 4 Date', $header),
+      // $Score4Index = array_search('Test 4 Scaled Score', $header),
+      // $TestLevel4Index = array_search('Test 4 CEFR Level', $header),
     ];
 
     $missingHeaders = array_filter($indices, fn($index) => $index === false);
@@ -105,7 +100,7 @@ class LeanerGrowthReportController extends Controller {
     $extractedData = [];
     foreach ($rows as $row) {
       $extractedData[] = [
-        'email'        => isset($row[$emailIndex]) && Str::endsWith($row[$emailIndex], '@uca.ac.ma') ? $row[$emailIndex] : null,
+        'email'        => isset($row[$emailIndex]) && Str::endsWith($row[$emailIndex], strtolower(env('DOMAIN_NAME'))) ? $row[$emailIndex] : null,
         'langue'       => isset($row[$LangueIndex]) && Str::contains($row[$LangueIndex], '(') ? trim(Str::before($row[$LangueIndex], '(')) : (isset($row[$LangueIndex]) ? trim($row[$LangueIndex]) : ''),
         'type_test_1'  => isset($row[$TypeTest1Index]) ? $row[$TypeTest1Index] : null,
         'date_test_1'  => isset($row[$DateTest1Index]) ? $row[$DateTest1Index] : null,
@@ -180,19 +175,26 @@ class LeanerGrowthReportController extends Controller {
         'date_test_3'  => $record['date_test_3'] ?? null,
         'score_test_3' => $record['score_test_3'] ?? null,
         'level_test_3' => $record['level_test_3'] ?? null,
+        // 'type_test_4'  => $record['type_test_4'] ?? null,
+        // 'date_test_4'  => $record['date_test_4'] ?? null,
+        // 'score_test_4' => $record['score_test_4'] ?? null,
+        // 'level_test_4' => $record['level_test_4'] ?? null,
       ];
     });
   }
 
   public function handle(Request $request) {
-    // ini_set('max_execution_time', 100);
+    ini_set('max_execution_time', 300);
     $request->validate(['csv_path' => 'required']);
-    $file = pathinfo($request->csv_path, PATHINFO_BASENAME);
+    $fileWithExtension = pathinfo($request->csv_path, PATHINFO_BASENAME);
 
-    $this->csvFile  = strtolower($file);
-    $this->fileName = Result::where('file', strtolower($file))->exists();
-    if ($this->fileName) {
-      return response()->json(['message' => "CSV file {$file} already imported."]);
+    // return $fileWithExtension;
+    [$prefix, $endDate] = Str::of(pathinfo($fileWithExtension, PATHINFO_FILENAME))->explode('.');
+
+    $this->fileName = 'LearnerGrowth_' . $endDate;
+
+    if (Result::where('file', strtolower($this->fileName))->exists()) {
+      return response()->json(['message' => "CSV file {$fileWithExtension} already imported."]);
 
     }
     try {
@@ -266,7 +268,11 @@ class LeanerGrowthReportController extends Controller {
           'date_test_3'  => $dataa['date_test_3'],
           'score_test_3' => $dataa['score_test_3'],
           'level_test_3' => $dataa['level_test_3'],
-          'file'         => $this->csvFile,
+          // 'type_test_4'  => $dataa['type_test_4'],
+          // 'date_test_4'  => $dataa['date_test_4'],
+          // 'score_test_4' => $dataa['score_test_4'],
+          // 'level_test_4' => $dataa['level_test_4'],
+          'file'         => strtolower($this->fileName),
         ];
       }
 
@@ -291,8 +297,6 @@ class LeanerGrowthReportController extends Controller {
         $maxRows         = floor($maxPlaceholders / $fieldsPerRow);
         $chunks          = array_chunk($batchInsertData, $maxRows);
         $this->learner[] = $chunks;
-        file_put_contents(storage_path('learnerGrowth/failed_chunks.json'), json_encode($chunks));
-        // return Excel::download(new LearnerGrowthExport($chunks), "LearnerGrowthExcel.xlsx");
 
         if (count($this->usersNull) == 0) {
           foreach ($chunks as $chunk) {
@@ -305,14 +309,17 @@ class LeanerGrowthReportController extends Controller {
       });
 
       if (count($this->usersNull) > 0) {
+        $students = collect($this->usersNull)->unique()->values()->toArray();
+        // $nbStudents = collect($this->usersNull)->unique()->count();
+
         return response()->json([
           'message'     => 'some students do not exist in our database',
-          'nb_students' => count($this->usersNull),
-          'students'    => $this->usersNull,
+          'nb_students' => collect($this->usersNull)->unique()->count(),
+          'students'    => $students,
         ]);
       };
 
-      return response()->json(['message' => "CSV file {$file} imported successfully."]);
+      return response()->json(['message' => "CSV file {$fileWithExtension} imported successfully."]);
     } catch (\Exception $e) {
       Log::error("Job failed with exception: {$e->getMessage()}", [
         'file'  => $e->getFile(),
@@ -325,6 +332,15 @@ class LeanerGrowthReportController extends Controller {
 
   public function ExportDataLearnerGrowth() {
     return Excel::download(new LearnerGrowthExport, 'LearnerGrowthReport.xlsx');
-
   }
+
+  public function exportResults() {
+    set_time_limit(300);
+    // Trigger the export
+
+    // return Excel::download(new ResultsExport, 'results.xlsx');
+
+    return Excel::download(new ResultsExport, 'results.csv', \Maatwebsite\Excel\Excel::CSV);
+  }
+
 }

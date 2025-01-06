@@ -2,7 +2,7 @@
 
 namespace App\Http\Controllers\api;
 
-use App\Exports\BuilderResultExport;
+use App\Exports\CouresExport;
 use App\Http\Controllers\Controller;
 use App\Models\Course;
 use Illuminate\Http\Request;
@@ -27,18 +27,22 @@ class BuilderController extends Controller {
 
   }
 
+  // Perform batch insert
   public function handle(Request $request) {
     set_time_limit(300);
+
     // Validate the incoming request to ensure the CSV path is provided
     $request->validate(['csv_path' => 'required']);
+
     // Get the basename (filename with extension)
     $fileWithExtension = pathinfo($request->csv_path, PATHINFO_BASENAME);
 
-// Get the filename without the extension
-    $this->fileName = pathinfo($fileWithExtension, PATHINFO_FILENAME);
+    [$prefix, $dateRange]  = Str::of(pathinfo($fileWithExtension, PATHINFO_FILENAME))->explode('.');
+    [$startDate, $endDate] = Str::of($dateRange)->explode('-')->chunk(3)->map(fn($chunk) => $chunk->implode('-'))->toArray();
+    $this->fileName        = 'Builder_' . $endDate;
+    // Check if the file has already been imported
     if (Course::where('file', strtolower($this->fileName))->exists()) {
       return response()->json(['message' => "CSV file {$fileWithExtension} already imported."]);
-
     }
 
     try {
@@ -59,56 +63,60 @@ class BuilderController extends Controller {
       $coursesToInsert = [];
 
       // Group the data by language first
-      $groupedByLangue = collect($data)->groupBy('langue')->map(function ($students, $langue) use (&$coursesToInsert) {
-        // Group the students by email
-        return $students->groupBy('email')->map(function ($userCourses, $email) use ($langue, &$coursesToInsert) {
+      $groupedByLanguage = collect($data)->groupBy('langue')->map(function ($students, $language) use (&$coursesToInsert) {
+        return $students->groupBy('email')->map(function ($userCourses, $email) use ($language, &$coursesToInsert) {
+
           // Retrieve the result IDs based on the email and language
           $resultIds = DB::table('results')
             ->join('students', 'results.student_id', '=', 'students.id')
             ->join('users', 'students.user_id', '=', 'users.id')
             ->join('languages', 'results.language_id', '=', 'languages.id')
             ->where('users.email', strtolower($email))
-            ->where('languages.libelle', strtolower($langue))
+            ->where('languages.libelle', strtolower($language))
             ->pluck('results.id');
 
           // Log and skip if no result IDs found
           if ($resultIds->isEmpty()) {
-            Log::warning("No results found for email: {$email} and language: {$langue}");
+            Log::warning("No results found for email: {$email} and language: {$language}");
 
             return []; // Skip this user if no results found
           }
 
-          // Group the courses by their name
-          $userCourses->groupBy('cours_name')->map(function ($lessons, $coursName) use ($resultIds, &$coursesToInsert) {
+          // Fetch the user details directly from the users table
+          $user = DB::table('users')->where('email', strtolower($email))->first();
+
+          if (!$user) {
+            Log::warning("User not found for email: {$email}");
+
+            return [];
+          }
+
+          $firstName = $user->first_name;
+          $lastName  = $user->last_name;
+          $userCourses->groupBy('cours_name')->map(function ($lessons, $courseName) use ($resultIds, &$coursesToInsert, $firstName, $lastName, $email, $language, ) {
             $resultId = $resultIds->first(); // Use the first result ID (you can customize if needed)
 
             // Prepare the course data for insertion
             $coursesToInsert[] = [
               'result_id'      => $resultId,
-              'cours_progress' => $lessons->pluck('cours_progress')->unique()->first() == '' ? 0 : $lessons->pluck('cours_progress')->unique()->first(), // Get the first unique course progress
-              'cours_grade' => $lessons->pluck('cours_grade')->unique()->first() == '' ? 0 : $lessons->pluck('cours_grade')->unique()->first(), // Get the first unique course grade
-              'cours_name' => $coursName,
+              'cours_progress' => $lessons->pluck('cours_progress')->unique()->first() ?: 0, // Default to 0 if empty
+              'cours_grade' => $lessons->pluck('cours_grade')->unique()->first() ?: 0, // Default to 0 if empty
+              'cours_name' => $courseName,
               'total_lessons'  => $lessons->pluck('lesson_name')->unique()->count(),
-              'file'           => $this->fileName,
-              // Calculate unique lessons
-              // 'total_lessons'  => $lessons->pluck('lesson_name')->unique()->count(), // Calculate unique lessons
+              'file'           => strtolower($this->fileName),
+
             ];
           });
 
           return $userCourses;
         });
       });
-
-      // Perform batch insert
+      // dd($coursesToInsert);
       DB::transaction(function () use ($coursesToInsert) {
         $maxPlaceholders = 65535;
-        $fieldsPerRow    = 22; // Adjust this to the actual number of fields you're inserting
+        $fieldsPerRow    = 30; // Adjust this to the actual number of fields you're inserting
         $maxRows         = floor($maxPlaceholders / $fieldsPerRow);
         $chunks          = array_chunk($coursesToInsert, $maxRows);
-
-        // Optional: Log chunk sizes if necessary for debugging
-        // file_put_contents(storage_path('learnerGrowth/failed_chunks.json'), json_encode($chunks));
-
         // Insert each chunk
         foreach ($chunks as $chunk) {
           Course::insert($chunk);
@@ -182,7 +190,7 @@ class BuilderController extends Controller {
     $extractedData = [];
     foreach ($rows as $row) {
       $extractedData[] = [
-        'email'          => isset($row[$emailIndex]) && Str::endsWith($row[$emailIndex], '@uca.ac.ma') ? $row[$emailIndex] : null,
+        'email'          => isset($row[$emailIndex]) && Str::endsWith($row[$emailIndex], strtolower(env('DOMAIN_NAME'))) ? $row[$emailIndex] : null,
         'langue'         => isset($row[$LangueIndex]) && Str::contains($row[$LangueIndex], '(') ? trim(Str::before($row[$LangueIndex], '(')) : (isset($row[$LangueIndex]) ? trim($row[$LangueIndex]) : ''),
         'cours_name'     => isset($row[$CoursNameIndex]) ? $row[$CoursNameIndex] : null,
         'cours_progress' => isset($row[$CoursProgressIndex]) ? $row[$CoursProgressIndex] : null,
@@ -197,10 +205,103 @@ class BuilderController extends Controller {
   }
 
   public function exportToExcel() {
-    $fileName = 'data_builder.xlsx';
+    set_time_limit(400);
+    // Load the locally stored data
+    $filePath = storage_path('builder/builder.json');
 
-    return Excel::download(new BuilderResultExport, $fileName);
-    // return Excel::download(new BuilderResultExport($data), 'grouped_data.xlsx');
+    if (!file_exists($filePath)) {
+      return response()->json(['message' => 'No data to export.'], 404);
+    }
+
+    $coursesToInsert = json_decode(file_get_contents($filePath), true);
+
+    // Export the data to Excel (or CSV)
+
+    return Excel::download(new CouresExport($coursesToInsert), 'builder .xlsx');
+  }
+  // public function exportCoursesToCsv() {
+  //   set_time_limit(800);
+
+  //   return Excel::download(new CouresExport, 'courses.csv', \Maatwebsite\Excel\Excel::CSV);
+  // }
+
+  public function exportCourseToCsv() {
+    set_time_limit(400);
+    $fileValue = 'builder_2024-12-28';
+    $fileName  = 'courses_' . $fileValue . '.csv'; // Define the CSV file name
+    $filePath  = storage_path('app/public/' . $fileName); // Define the file path
+    $handle    = fopen($filePath, 'w'); // Open file for writing
+
+    // Add UTF-8 BOM to ensure compatibility with Excel
+    fwrite($handle, "\xEF\xBB\xBF");
+
+    // Write the CSV header
+    fputcsv($handle, [
+      'File',
+      'First Name',
+      'Last Name',
+      'Email',
+      'Language',
+      'Institution',
+      'Branch',
+      'Group',
+      'Semester',
+      'Course Name',
+      'Course Progress',
+      'Course Grade',
+      'Total Lessons',
+    ]);
+
+    DB::table('results as r')
+      ->join('languages as l', 'r.language_id', '=', 'l.id')
+      ->join('students as s', 'r.student_id', '=', 's.id')
+      ->join('users as u', 's.user_id', '=', 'u.id')
+      ->join('institutions as i', 's.institution_id', '=', 'i.id')
+      ->join('courses as c', 'c.result_id', '=', 'r.id')
+      ->leftJoin('groups as g', 's.group_id', '=', 'g.id')
+      ->leftJoin('branches as b', 's.branch_id', '=', 'b.id')
+      ->leftJoin('semesters as sm', 's.semester_id', '=', 'sm.id')
+      ->select([
+        'c.file',
+        'u.first_name',
+        'u.last_name',
+        'u.email as user_email',
+        'l.libelle as language_libelle',
+        'i.libelle as institution_libelle',
+        'b.libelle as branch_libelle',
+        'g.libelle as group_libelle',
+        'sm.libelle as semester_libelle',
+        'c.cours_name',
+        'c.cours_progress',
+        'c.cours_grade',
+        'c.total_lessons',
+      ])
+      ->where('c.file', '=', strtolower($fileValue)) // Add the condition here
+      ->orderByDesc('c.total_lessons')
+      ->chunk(900000, function ($rows) use ($handle) { // Adjust chunk size for optimal performance
+        foreach ($rows as $row) {
+          // Write each record to the CSV file
+          fputcsv($handle, [
+            $row->file,
+            $row->first_name,
+            $row->last_name,
+            $row->user_email,
+            $row->language_libelle,
+            $row->institution_libelle,
+            $row->branch_libelle,
+            $row->group_libelle,
+            $row->semester_libelle,
+            $row->cours_name,
+            $row->cours_progress,
+            $row->cours_grade,
+            $row->total_lessons,
+          ]);
+        }
+      });
+
+    // Return the file as a downloadable response
+
+    return response()->download($filePath)->deleteFileAfterSend(true);
   }
 
 }

@@ -12,7 +12,6 @@ return new class extends Migration {
     Schema::create('teachers', function (Blueprint $table) {
       $table->id(); // Primary key
       $table->enum('status', ['vac', 'Permanent']); // Status of the teacher
-      $table->enum('role_teach', ['Mentor', 'Prof', 'all']); // Role of the teacher
       // Foreign keys
       $table->foreignId('group_id')->constrained()->onDelete('cascade'); // Reference to groups table
       $table->foreignId('branch_id')->constrained()->onDelete('cascade'); // Reference to branches table

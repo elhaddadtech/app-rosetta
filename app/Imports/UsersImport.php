@@ -19,17 +19,19 @@ class UsersImport implements ToCollection, WithHeadingRow {
   public $errors = [];
   public $count  = 0;
   public function collection(Collection $rows) {
+    $domainName = strtolower(env('DOMAIN_NAME'));
     foreach ($rows as $index => $row) {
-      $validator = Validator::make($row->toArray(), [
+      $emailRegex = '/^[a-zA-Z0-9._%+-]+@' . preg_quote($domainName, '/') . '$/';
+      $validator  = Validator::make($row->toArray(), [
         'last_name'     => 'required|string|max:255',
         'first_name'    => 'required|string|max:255',
-        'email'         => 'required|email|regex:/^[a-zA-Z0-9._%+-]+@uca\.ac\.ma$/',
+        'email'         => 'required|email|regex:' . $emailRegex,
         'cne'           => 'required|string',
         'institution'   => 'required|string|max:255',
         'role'          => 'required|string|max:255',
         'date_of_birth' => 'required|string|max:255',
 
-      ], ['email.regex' => "Email {$row['email']} must be from the domain @uca.ac.ma."]);
+      ], ['email.regex' => "Email {$row['email']} must be from the domain {$domainName}."]);
       // dd($validator->errors()->all());
       $role = Role::where('Libelle', strtolower($row['role']))->first();
       // $student = Student::where('cne', strtolower($row['cne']))->first(); || $student

@@ -16,9 +16,10 @@ class TeachersImport implements ToCollection, WithHeadingRow {
   public $count  = 0;
 
   public function collection(Collection $rows) {
+    $domainName = strtolower(env('DOMAIN_NAME'));
     // Cache valid values for faster lookups
     $validStatuses = ['vac', 'permanent'];
-    $validRoles    = ['mentor', 'prof', 'all'];
+    // $validRoles    = ['mentor', 'prof', 'all'];
 
     $existingInstitutions = Institution::pluck('id', 'libelle')->mapWithKeys(fn($id, $name) => [strtolower($name) => $id]);
     $existingGroups       = Group::pluck('id', 'libelle')->mapWithKeys(fn($id, $name) => [strtolower($name) => $id]);
@@ -29,20 +30,20 @@ class TeachersImport implements ToCollection, WithHeadingRow {
       $rowIndex = $index + 2; // Row number considering the header
 
       // Convert row values to lowercase for consistency
-      $row = $row->map(fn($value) => is_string($value) ? strtolower(trim($value)) : $value);
-
+      $row        = $row->map(fn($value) => is_string($value) ? strtolower(trim($value)) : $value);
+      $emailRegex = '/^[a-zA-Z0-9._%+-]+@' . preg_quote($domainName, '/') . '$/';
       // Validation rules
       $validator = Validator::make($row->toArray(), [
-        'email'       => 'required|email|regex:/^[a-zA-Z0-9._%+-]+@uca\.ac\.ma$/',
+        'email'       => 'required|email|regex:' . $emailRegex,
         'institution' => 'required|string|max:255',
         'status'      => 'required|in:' . implode(',', $validStatuses),
         'group'       => 'required|string|max:255',
         'branch'      => 'required|string|max:255',
-        'role'        => 'required|in:' . implode(',', $validRoles),
+        // 'role'        => 'required|in:' . implode(',', $validRoles),
       ], [
-        'email.regex' => "The email {$row['email']} must be from the domain @uca.ac.ma.",
+        'email.regex' => "The email {$row['email']} must be from the domain {$domainName}.",
         'status.in'   => "Invalid status: {$row['status']}. Valid options are: " . implode(', ', $validStatuses),
-        'role.in'     => "Invalid role: {$row['role']}. Valid options are: " . implode(', ', $validRoles),
+        // 'role.in'     => "Invalid role: {$row['role']}. Valid options are: " . implode(', ', $validRoles),
       ]);
 
       if ($validator->fails()) {
@@ -84,7 +85,7 @@ class TeachersImport implements ToCollection, WithHeadingRow {
           'branch_id'      => $existingBranches[$row['branch']],
           'group_id'       => $existingGroups[$row['group']],
           'status'         => $row['status'],
-          'role_teach'     => $row['role'],
+          // 'role_teach'     => $row['role'],
         ]
       );
 

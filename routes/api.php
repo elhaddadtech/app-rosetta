@@ -5,7 +5,6 @@ use App\Http\Controllers\api\ChiefController;
 use App\Http\Controllers\api\CoursController;
 use App\Http\Controllers\api\FondationReportController;
 use App\Http\Controllers\api\GroupController;
-use App\Http\Controllers\api\GrowthReportController;
 use App\Http\Controllers\api\ImportController;
 use App\Http\Controllers\api\LanguageController;
 use App\Http\Controllers\api\LeanerGrowthReportController;
@@ -31,11 +30,15 @@ Route::apiResource('languages', LanguageController::class);
 Route::apiResource('teachers', TeacherController::class);
 Route::apiResource('chiefs', ChiefController::class);
 Route::apiResource('results', ResultController::class);
+Route::apiResource('courses', CoursController::class);
+
+//----------------------Search Api ----------------------------
+Route::post('search/user', [SearchController::class, 'searchStudents']);
+
+//-------------Import CSV Files ------------------------
 Route::post('/students/import', [ImportController::class, 'importStudents']);
 Route::post('/teachers/import', [TeacherController::class, 'importTeachers']);
 Route::post('/Groups/import', [GroupController::class, 'importGroups']);
-//Search Api
-Route::post('search/user', [SearchController::class, 'searchStudents']);
 //import csv file learnerGrowth
 Route::post('import/LearnerGrowthReport', [LeanerGrowthReportController::class, 'importGrowthCSV']);
 Route::post('import/LearnerGrowthReport/handle', [LeanerGrowthReportController::class, 'handle']);
@@ -46,21 +49,20 @@ Route::post('import/builderReport/handle', [BuilderController::class, 'handle'])
 Route::post('import/FondationReport', [FondationReportController::class, 'importFondationCSV']);
 Route::post('import/FondationReport/handle', [FondationReportController::class, 'handle']);
 
-Route::get('export/builderReport', [BuilderController::class, 'exportToExcel']);
-// Route::post('test', [CatalystController::class, 'paperInsert']);
+//---------------Export CSV Files ------------------------
+
+Route::get('builderReport/export', [BuilderController::class, 'exportToExcel']);
 Route::get('users/export', [UserController::class, 'export']);
 
-Route::get('learnerGrowth/export', [GrowthReportController::class, 'ExportDataLearnerGrowth']);
-
+Route::get('learnerGrowth/export', [LeanerGrowthReportController::class, 'ExportDataLearnerGrowth']);
+Route::get('learnerGrowth/results/export', [LeanerGrowthReportController::class, 'exportResults']);
+Route::get('coures/export', [BuilderController::class, 'exportCourseToCsv']);
 //Coures controller
-Route::apiResource('courses', CoursController::class);
-
 // --------------Results_Stats --------------------------------
 Route::get('learnerGrowth/stats', [ResultsStatsControler::class, 'ResultStats']);
+
 // Route::get('/user', function (Request $request) {
 //     return $request->user();
 // })->middleware('auth:sanctum');
-// Route::post('/upload-update-students', [ImportController::class, 'importUpdateCSV']);
-// Route::post('/upload-updateStudents', [CsvUploadController::class, 'importUpdateStudents']);
-// Route::post('/uploadUpdateUsers', [CsvUploadController::class, 'importUpdateUsersFromCsv']);
-// Route::post('/uploadUsers', [CsvUploadController::class, 'importUsersFromCsv']);
+
+

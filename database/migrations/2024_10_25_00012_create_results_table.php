@@ -33,9 +33,6 @@ return new class extends Migration {
       $table->string('date_test_4', 45)->nullable();
       $table->string('score_test_4', 45)->nullable();
       $table->string('level_test_4', 45)->nullable();
-      $table->string('activity', 45)->nullable();
-      $table->string('pass_score', 45)->nullable();
-      $table->string('total_score', 45)->nullable();
 
       // Foreign keys
       $table->foreignId('student_id')->constrained()->onDelete('cascade');

@@ -30,8 +30,10 @@ class FondationReportController extends Controller {
     // Get the basename (filename with extension)
     $fileWithExtension = pathinfo($request->csv_path, PATHINFO_BASENAME);
 
-// Get the filename without the extension
-    $this->fileName = pathinfo($fileWithExtension, PATHINFO_FILENAME);
+    [$prefix, $dateRange]  = Str::of(pathinfo($fileWithExtension, PATHINFO_FILENAME))->explode('.');
+    [$startDate, $endDate] = Str::of($dateRange)->explode('-')->chunk(3)->map(fn($chunk) => $chunk->implode('-'))->toArray();
+    $this->fileName        = 'Foundations_' . $endDate;
+
     if (Course::where('file', strtolower($this->fileName))->exists()) {
       return response()->json(['message' => "CSV file {$fileWithExtension} already imported."]);
 
@@ -81,13 +83,14 @@ class FondationReportController extends Controller {
             // Prepare the course data for insertion
             $coursesToInsert[] = [
               'result_id'      => $resultId,
-              'cours_progress' => $lessons->pluck('cours_progress')->unique()->first() == '' ? 0 : $lessons->pluck('cours_progress')->unique()->first(), // Get the first unique course progress
-              'cours_grade' => $lessons->pluck('cours_grade')->unique()->first() == '' ? 0 : $lessons->pluck('cours_grade')->unique()->first(), // Get the first unique course grade
+              'cours_progress' => $lessons->pluck('cours_progress')->unique()->first() == '' ? '0%' : ($lessons->pluck('cours_progress')->unique()->first() . '%'), // Get the first unique course progress
+              'cours_grade' => $lessons->pluck('cours_grade')->unique()->first() == '' ? '0%' : ($lessons->pluck('cours_grade')->unique()->first() . '%'), // Get the first unique course grade
               'cours_name' => $coursName,
-              'file'           => $this->fileName,
+              'file'           => strtolower($this->fileName),
               // Calculate unique lessons
               // 'total_lessons'  => $lessons->pluck('lesson_name')->unique()->count(), // Calculate unique lessons
             ];
+            // dd($coursesToInsert);
           });
 
           return $userCourses;
@@ -97,12 +100,9 @@ class FondationReportController extends Controller {
       // Perform batch insert
       DB::transaction(function () use ($coursesToInsert) {
         $maxPlaceholders = 65535;
-        $fieldsPerRow    = 22; // Adjust this to the actual number of fields you're inserting
+        $fieldsPerRow    = 30; // Adjust this to the actual number of fields you're inserting
         $maxRows         = floor($maxPlaceholders / $fieldsPerRow);
         $chunks          = array_chunk($coursesToInsert, $maxRows);
-
-        // Optional: Log chunk sizes if necessary for debugging
-        // file_put_contents(storage_path('learnerGrowth/failed_chunks.json'), json_encode($chunks));
 
         // Insert each chunk
         foreach ($chunks as $chunk) {
@@ -184,7 +184,7 @@ class FondationReportController extends Controller {
 
     foreach ($rows as $row) {
       $extractedData[] = [
-        'email'          => isset($row[$emailIndex]) ? $row[$emailIndex] : null,
+        'email'          => isset($row[$emailIndex]) && Str::endsWith($row[$emailIndex], strtolower(env('DOMAIN_NAME'))) ? $row[$emailIndex] : null,
         'langue'         => isset($row[$LangueIndex]) && Str::contains($row[$LangueIndex], ' ')
         ? trim(Str::before($row[$LangueIndex], ' '))
         : (isset($row[$LangueIndex]) ? trim($row[$LangueIndex]) : ''),

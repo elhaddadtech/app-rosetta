@@ -2,9 +2,11 @@
 
 namespace App\Http\Controllers\api;
 
+use App\Exports\CouresExport;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Maatwebsite\Excel\Facades\Excel;
 
 class CoursController extends Controller {
   /**
@@ -28,6 +30,11 @@ class CoursController extends Controller {
    * Display the specified resource.
    */
   public function show(string $id) {
+
+    // $results = Result::where('language_id', $id)->get();
+
+    // return response()->json($results);
+
     $courses = DB::table('courses')
       ->join('results', 'courses.result_id', '=', 'results.id')
       ->join('students', 'students.id', '=', 'results.student_id')
@@ -58,4 +65,11 @@ class CoursController extends Controller {
   public function destroy(string $id) {
     //
   }
+
+  public function exportCoures() {
+    set_time_limit(400);
+
+    return Excel::download(new CouresExport(), 'coures_details.csv', \Maatwebsite\Excel\Excel::CSV);
+  }
+
 }
