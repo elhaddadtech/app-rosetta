@@ -3,7 +3,6 @@
 namespace App\Http\Controllers\api;
 
 use App\Exports\LearnerGrowthExport;
-use App\Exports\ResultsExport;
 use App\Http\Controllers\Controller;
 use App\Models\Language;
 use App\Models\Result;
@@ -116,6 +115,7 @@ class LeanerGrowthReportController extends Controller {
         'level_test_2' => isset($row[$TestLevel2Index]) ? $row[$TestLevel2Index] : null,
         'type_test_3'  => isset($row[$TypeTest3Index]) ? $row[$TypeTest3Index] : null,
         'date_test_3'  => isset($row[$DateTest3Index]) ? $row[$DateTest3Index] : null,
+        'score_test_3' => isset($row[$Score3Index]) ? $row[$Score3Index] : null,
         'level_test_3' => isset($row[$TestLevel3Index]) ? $row[$TestLevel3Index] : null,
       ];
     }
@@ -334,13 +334,116 @@ class LeanerGrowthReportController extends Controller {
     return Excel::download(new LearnerGrowthExport, 'LearnerGrowthReport.xlsx');
   }
 
-  public function exportResults() {
-    set_time_limit(300);
-    // Trigger the export
+  public function exportResultsToCsv() {
+    $fileName = 'LearnerGrowth_results' . '.csv'; // Generate file name with timestamp
+    $filePath = storage_path('app/public/' . $fileName); // Define file path
+    $handle   = fopen($filePath, 'w'); // Open file for writing
 
-    // return Excel::download(new ResultsExport, 'results.xlsx');
+    // Add BOM for UTF-8 encoding
+    fwrite($handle, "\xEF\xBB\xBF");
 
-    return Excel::download(new ResultsExport, 'results.csv', \Maatwebsite\Excel\Excel::CSV);
+    // Write the CSV header
+    fputcsv($handle, [
+      'File',
+      'Last Name',
+      'First Name',
+      'Email',
+      'Language',
+      'Institution',
+      'Level Test 1',
+      'Score Test 1',
+      'Type Test 1',
+      'Date Test 1',
+      'Test Time 1',
+      'Desktop Time',
+      'Mobile Time',
+      'Total Time',
+      'Type Test 2',
+      'Date Test 2',
+      'Score Test 2',
+      'Level Test 2',
+      'Type Test 3',
+      'Date Test 3',
+      'Score Test 3',
+      'Level Test 3',
+    ]);
+
+    // Query and process data in chunks
+    $isDataAvailable = false; // Flag to check if any data exists
+
+    DB::table('results')
+      ->join('languages', 'results.language_id', '=', 'languages.id')
+      ->join('students', 'results.student_id', '=', 'students.id')
+      ->join('users', 'students.user_id', '=', 'users.id')
+      ->join('institutions', 'students.institution_id', '=', 'institutions.id')
+      ->select([
+        'results.file',
+        'users.last_name',
+        'users.first_name',
+        'users.email as user_email',
+        'languages.libelle as language_libelle',
+        'institutions.libelle as institution_libelle',
+        'results.level_test_1',
+        'results.score_test_1',
+        'results.type_test_1',
+        'results.date_test_1',
+        'results.test_time_1',
+        'results.desktop_time',
+        'results.mobile_time',
+        'results.total_time',
+        'results.type_test_2',
+        'results.date_test_2',
+        'results.score_test_2',
+        'results.level_test_2',
+        'results.type_test_3',
+        'results.date_test_3',
+        'results.score_test_3',
+        'results.level_test_3',
+      ])
+      ->orderBy('results.file')
+      ->chunk(900000, function ($results) use ($handle, &$isDataAvailable) {
+        // Process each chunk of data
+        foreach ($results as $result) {
+          $isDataAvailable = true; // Set flag to true when data is found
+          fputcsv($handle, [
+            $result->file,
+            $result->last_name,
+            $result->first_name,
+            $result->user_email,
+            $result->language_libelle,
+            $result->institution_libelle,
+            $result->level_test_1,
+            $result->score_test_1,
+            $result->type_test_1,
+            $result->date_test_1,
+            $result->test_time_1,
+            $result->desktop_time,
+            $result->mobile_time,
+            $result->total_time,
+            $result->type_test_2,
+            $result->date_test_2,
+            $result->score_test_2,
+            $result->level_test_2,
+            $result->type_test_3,
+            $result->date_test_3,
+            $result->score_test_3,
+            $result->level_test_3,
+          ]);
+        }
+      });
+
+    fclose($handle); // Close the file after writing
+
+    // If no data was written, discard the file and return a response
+    if (!$isDataAvailable) {
+      unlink($filePath); // Delete the empty file
+
+      return response()->json(['message' => 'No results found to export'], 404);
+    }
+
+    // Return the file as a downloadable response and delete it after sending
+
+    return response()->download($filePath)->deleteFileAfterSend(true);
   }
 
 }

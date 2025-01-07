@@ -21,10 +21,10 @@ class UsersImport implements ToCollection, WithHeadingRow {
   public function collection(Collection $rows) {
     $domainName = strtolower(env('DOMAIN_NAME'));
     foreach ($rows as $index => $row) {
-      $emailRegex = '/^[a-zA-Z0-9._%+-]+@' . preg_quote($domainName, '/') . '$/';
+      $emailRegex = '/^[a-zA-Z0-9._%+-]+' . preg_quote($domainName, '/') . '$/';
       $validator  = Validator::make($row->toArray(), [
-        'last_name'     => 'required|string|max:255',
-        'first_name'    => 'required|string|max:255',
+        // 'last_name'     => 'required|string|max:255',
+        // 'first_name'    => 'required|string|max:255',
         'email'         => 'required|email|regex:' . $emailRegex,
         'cne'           => 'required|string',
         'institution'   => 'required|string|max:255',

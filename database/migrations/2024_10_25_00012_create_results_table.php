@@ -19,7 +19,6 @@ return new class extends Migration {
       $table->string('test_time_1', 45);
       $table->string('desktop_time', 45);
       $table->string('mobile_time', 45);
-      $table->string('test_Time', 45);
       $table->string('total_time', 45);
       $table->string('type_test_2', 45)->nullable();
       $table->string('date_test_2', 45)->nullable();

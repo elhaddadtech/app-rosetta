@@ -14,7 +14,7 @@ return new class extends Migration {
       $table->string('cours_name'); // Course Name
       $table->string('cours_progress'); // Course Progress
       $table->string('cours_grade')->nullable(); // Course Grade (nullable if no grade)
-      $table->integer('total_lessons'); // Total Lessons
+      $table->integer('total_lessons')->nullable(); // Total Lessons
 
       // Foreign key to the results table
       $table->unsignedBigInteger('result_id'); // Foreign key column

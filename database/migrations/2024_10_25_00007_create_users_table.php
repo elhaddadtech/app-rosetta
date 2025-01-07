@@ -11,8 +11,8 @@ return new class extends Migration {
   public function up(): void {
     Schema::create('users', function (Blueprint $table) {
       $table->id();
-      $table->string('first_name', 45);
-      $table->string('last_name', 45);
+      $table->string('first_name', 45)->nullable();
+      $table->string('last_name', 45)->nullable();
       $table->string('email', 100)->unique(); // Index unique pour l'email
       $table->foreignId('role_id')->nullable()->constrained()->onDelete('cascade');;
       $table->timestamps();

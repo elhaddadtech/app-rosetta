@@ -55,14 +55,12 @@ Route::get('builderReport/export', [BuilderController::class, 'exportToExcel']);
 Route::get('users/export', [UserController::class, 'export']);
 
 Route::get('learnerGrowth/export', [LeanerGrowthReportController::class, 'ExportDataLearnerGrowth']);
-Route::get('learnerGrowth/results/export', [LeanerGrowthReportController::class, 'exportResults']);
+Route::get('learnerGrowth/results/export', [LeanerGrowthReportController::class, 'exportResultsToCsv']);
 Route::get('coures/export', [BuilderController::class, 'exportCourseToCsv']);
 //Coures controller
 // --------------Results_Stats --------------------------------
-Route::get('learnerGrowth/stats', [ResultsStatsControler::class, 'ResultStats']);
+Route::get('learnerGrowth/stats', [ResultsStatsControler::class, 'exportLearnerGrowthToCsv']);
 
 // Route::get('/user', function (Request $request) {
 //     return $request->user();
 // })->middleware('auth:sanctum');
-
-

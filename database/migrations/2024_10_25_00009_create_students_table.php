@@ -12,7 +12,7 @@ return new class extends Migration {
     Schema::create('students', function (Blueprint $table) {
       $table->id();
       $table->string('cne', 45);
-      $table->string('apogee', 45);
+      $table->string('apogee', 45)->nullable();
       $table->string('birthdate')->nullable(); // Date de naissance
       $table->foreignId('group_id')->nullable()->constrained()->onDelete('cascade');
       $table->foreignId('branch_id')->nullable()->constrained()->onDelete('cascade');
