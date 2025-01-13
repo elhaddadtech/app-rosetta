@@ -33,7 +33,7 @@ Route::apiResource('results', ResultController::class);
 Route::apiResource('courses', CoursController::class);
 
 //----------------------Search Api ----------------------------
-Route::post('search/user', [SearchController::class, 'searchStudents']);
+Route::post('search/user', [SearchController::class, 'searchUsers']);
 
 //-------------Import CSV Files ------------------------
 Route::post('/students/import', [ImportController::class, 'importStudents']);

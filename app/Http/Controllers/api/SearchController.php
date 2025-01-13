@@ -94,4 +94,75 @@ class SearchController extends Controller {
     ]);
   }
 
+  public function searchUsers(Request $request) {
+    $validated = $request->validate([
+      'email' => 'required|string|max:255',
+    ]);
+
+    $search = strtolower(trim($validated['email']));
+
+    // Requête pour récupérer l'étudiant avec les relations nécessaires
+    $student = Student::whereHas('user', function ($query) use ($search) {
+      $query->where('email', $search); // Vérifie l'email dans la table users
+    })
+      ->with(['results.course']) // Charger les résultats et les cours associés
+      ->first(); // Récupérer le premier étudiant correspondant
+
+    if (!$student) {
+      return response()->json([
+        'status'  => false,
+        'message' => 'Student not found',
+      ], 404);
+    }
+
+    // return $student->user;
+    // Transformation des données pour optimisation
+    $optimizedResult = [
+      'id'          => $student->id,
+      'email'       => $student->user->email ?? 'N/A',
+      'full_name'   => $student->user->full_name ?? 'N/A',
+      'institution' => $student->institution->libelle ?? 'N/A',
+      'group'       => $student->user->group_libelle ?? 'N/A',
+      'branch'      => $student->user->branch_libelle ?? 'N/A',
+      'semester'    => $student->user->semester_libelle ?? 'N/A',
+      'cne'         => $student->cne ?? 'N/A',
+      'apogee'      => $student->apogee ?? 'N/A',
+      'birthdate'   => $student->birthdate ?? 'N/A',
+      'languages'   => $student->results->groupBy('language_libelle')->map(function ($results) {
+        return $results->map(function ($result) {
+          return [
+            'id'           => $result->id,
+            'type_test_1'  => $result->type_test_1,
+            'date_test_1'  => $result->date_test_1,
+            'score_test_1' => $result->score_test_1,
+            'level_test_1' => $result->level_test_1,
+            'total_time'   => $result->total_time,
+            'type_test_2'  => $result->type_test_2,
+            'date_test_2'  => $result->date_test_2,
+            'score_test_2' => $result->score_test_2,
+            'level_test_2' => $result->level_test_2,
+            'courses'      => $result->course->map(function ($course) {
+              return [
+                'id'            => $course->id,
+                'name'          => $course->cours_name,
+                'progress'      => $course->cours_progress,
+                'grade'         => $course->cours_grade,
+                'total_lessons' => $course->total_lessons,
+              ];
+            }),
+          ];
+        });
+      }),
+    ];
+
+    // Retourner les données optimisées
+
+    return response()->json([
+      'status' => true,
+
+      'result' => $optimizedResult,
+    ]);
+
+  }
+
 }

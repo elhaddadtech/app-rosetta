@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Models\Course;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
@@ -54,5 +55,15 @@ class Student extends Model {
   }
   public function results() {
     return $this->hasMany(Result::class);
+  }
+  public function courses() {
+    return $this->hasManyThrough(
+      Course::class, // Modèle cible (courses)
+      Result::class, // Modèle intermédiaire (results)
+      'student_id', // Clé étrangère dans `results` pour relier à `students`
+      'result_id', // Clé étrangère dans `courses` pour relier à `results`
+      'id', // Clé primaire dans `students`
+      'id' // Clé primaire dans `results`
+    );
   }
 }
