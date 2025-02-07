@@ -5,6 +5,7 @@ namespace App\Http\Controllers\api;
 use App\Exports\CouresExport;
 use App\Http\Controllers\Controller;
 use App\Models\CefrMapping;
+use App\Models\Course;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Log;
@@ -21,7 +22,7 @@ class BuilderController extends Controller {
     $fileFullPath = storage_path('app/public/' . $filePath);
     $file         = pathinfo($fileFullPath, PATHINFO_BASENAME);
 
-    return response()->json(['message' => "CSV file {$file} imported successfully.", 'path' => $fileFullPath]);
+    return response()->json(['status' => true, 'message' => "CSV file {$file} imported successfully.", 'path' => $fileFullPath]);
 
     // $hna          = "C:\Users\Admin\Documents\app-rosetta\storage\app/public/csv_uploads/FluencyBuilderLessonDetailReport.2024-09-04-2024-12-25.csv";
 
@@ -29,12 +30,20 @@ class BuilderController extends Controller {
 
   // Perform batch insert
   public function handle(Request $request) {
-    set_time_limit(300);
+    set_time_limit(400);
+
     // Validate CSV file path
     $request->validate(['csv_path' => 'required']);
 
     // Extract filename
     $this->fileName = $this->extractFileName($request->csv_path);
+
+    //  Check if this file has already been processed
+    if (Course::where('file', $this->fileName)->exists()) {
+      Log::warning("CSV file '{$this->fileName}' has already been processed.");
+
+      return response()->json(['status' => false, 'message' => "CSV file '{$this->fileName}' has already been imported."], 409);
+    }
 
     try {
       Log::info("Processing CSV file: {$request->csv_path}");
@@ -52,8 +61,8 @@ class BuilderController extends Controller {
       $coursesToInsert = $this->processStudents($data);
 
       return response()->json([
-        'message'         => 'Data processed and stored successfully.',
-        'coursesToInsert' => $coursesToInsert,
+        'status'  => true,
+        'message' => 'Data processed and stored successfully.',
       ]);
     } catch (\Exception $e) {
       Log::error("Job failed: {$e->getMessage()}");
@@ -70,7 +79,7 @@ class BuilderController extends Controller {
     [$prefix, $dateRange]  = explode('.', pathinfo($fileWithExtension, PATHINFO_FILENAME));
     [$startDate, $endDate] = explode('-', $dateRange);
 
-    return 'Builder_' . $endDate;
+    return 'Builder_' . $dateRange;
   }
 
 /**
@@ -103,7 +112,9 @@ class BuilderController extends Controller {
       });
     });
 
-    return $coursesToInsert;
+    return true;
+
+    // return $coursesToInsert;
   }
 
 /**
@@ -123,16 +134,16 @@ class BuilderController extends Controller {
       return null;
     }
 
-    $cefrMapping = CefrMapping::where('level', $result->level_test_1)->where('language', $language)->first();
+    $cefrMapping = CefrMapping::where('level', strtolower($result->level_test_1))->where('language', strtolower($language))->first();
     if (!$cefrMapping) {
       return null;
     }
 
     return [
       'email'        => $email,
-      'language'     => $language,
+      'language'     => strtolower($language),
       'resultId'     => $result->id,
-      'studentCEFR'  => $result->level_test_1,
+      'studentCEFR'  => strtolower($result->level_test_1),
       'totalLessons' => $cefrMapping->lesson,
       'totalHours'   => $this->convertTimeToHours($result->total_time),
     ];
@@ -199,20 +210,43 @@ class BuilderController extends Controller {
 /**
  * Insert student courses into `$coursesToInsert`.
  */
-  private function insertStudentCourses($userCourses, $studentData, $noteCC1, $noteCC2, $noteCC, &$coursesToInsert) {
-    $userCourses->groupBy('cours_name')->each(function ($lessons, $courseName) use (&$coursesToInsert, $studentData, $noteCC1, $noteCC2, $noteCC) {
+  private function insertStudentCourses($userCourses, $studentData, $noteCC1, $noteCC2, $noteCC) {
+    // s Disable Query Logging for Large Inserts (Prevents Memory Overload)
+    DB::disableQueryLog();
+
+    $coursesToInsert = [];
+
+    foreach ($userCourses->groupBy('cours_name') as $courseName => $lessons) {
       $coursesToInsert[] = [
-        'email'      => $studentData['email'],
-        'language'   => $studentData['language'],
-        'result_id'  => $studentData['resultId'],
-        'cours_name' => $courseName,
-        'noteCC1'    => round($noteCC1, 2),
-        'noteCC2'    => round($noteCC2, 2),
-        'noteCC'     => round($noteCC, 2),
-        'file'       => strtolower($this->fileName),
+        'result_id'      => $studentData['resultId'],
+        'cours_name'     => $courseName,
+        'cours_progress' => $lessons->pluck('cours_progress')->unique()->first() ?: 0,
+        'cours_grade'    => $lessons->pluck('cours_grade')->unique()->first() ?: 0,
+        'total_lessons'  => $lessons->pluck('lesson_name')->unique()->count(),
+        'noteCC1'        => round($noteCC1, 2),
+        'noteCC2'        => round($noteCC2, 2),
+        'noteCC'         => round($noteCC, 2),
+        'file'           => strtolower($this->fileName),
+        'created_at'     => now(),
+        'updated_at'     => now(),
       ];
-    });
+    }
+
+    // ✅ **Only Proceed if Data Exists**
+    if (!empty($coursesToInsert)) {
+      $maxPlaceholders = 65535; // MySQL Limit
+      $columnsPerRow   = count($coursesToInsert[0]); // Count columns in one row
+
+      // ✅ Calculate Dynamic Chunk Size (Avoid MySQL Overload)
+      $chunkSize = min(5000, floor($maxPlaceholders / $columnsPerRow)); // Safe Limit
+
+      // ✅ **Batch Insert in Chunks**
+      foreach (array_chunk($coursesToInsert, $chunkSize) as $chunk) {
+        DB::table('courses')->insert($chunk);
+      }
+    }
   }
+
 /**
  * Reads a CSV file and extracts structured data.
  */
