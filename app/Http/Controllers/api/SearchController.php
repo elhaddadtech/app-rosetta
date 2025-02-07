@@ -115,20 +115,23 @@ class SearchController extends Controller {
       ], 404);
     }
 
-    // return $student->user;
+    
+    // return $student?->results;
     // Transformation des données pour optimisation
     $optimizedResult = [
-      'id'          => $student->id,
-      'email'       => $student->user->email ?? 'N/A',
-      'full_name'   => $student->user->full_name ?? 'N/A',
-      'institution' => $student->institution->libelle ?? 'N/A',
-      'group'       => $student->user->group_libelle ?? 'N/A',
-      'branch'      => $student->user->branch_libelle ?? 'N/A',
-      'semester'    => $student->user->semester_libelle ?? 'N/A',
-      'cne'         => $student->cne ?? 'N/A',
-      'apogee'      => $student->apogee ?? 'N/A',
-      'birthdate'   => $student->birthdate ?? 'N/A',
-      'languages'   => $student->results->groupBy('language_libelle')->map(function ($results) {
+      'id'          => $student?->id,
+      'email'       => $student?->user->email ?? 'N/A',
+      'full_name'   => $student?->user->full_name ?? 'N/A',
+      'institution' => $student?->institution->libelle ?? 'N/A',
+      'group'       => $student?->user->group_libelle ?? 'N/A',
+      'branch'      => $student?->user->branch_libelle ?? 'N/A',
+      'semester'    => $student?->user->semester_libelle ?? 'N/A',
+      'cne'         => $student?->cne ?? 'N/A',
+      'apogee'      => $student?->apogee ?? 'N/A',
+      'birthdate'   => $student?->birthdate ?? 'N/A',
+      'role'        => 'admin',
+      // 'role'        => $student?->user?->role_libelle ?? null,
+      'languages'   => $student?->results->groupBy('language_libelle')->map(function ($results) {
         return $results->map(function ($result) {
           return [
             'id'           => $result->id,
@@ -141,6 +144,12 @@ class SearchController extends Controller {
             'date_test_2'  => $result->date_test_2,
             'score_test_2' => $result->score_test_2,
             'level_test_2' => $result->level_test_2,
+
+            'type_test_3'  => $result->type_test_3,
+            'date_test_3'  => $result->date_test_3,
+            'score_test_3' => $result->score_test_3,
+            'level_test_3' => $result->level_test_3,
+
             'courses'      => $result->course->map(function ($course) {
               return [
                 'id'            => $course->id,

@@ -43,7 +43,7 @@ Route::post('/Groups/import', [GroupController::class, 'importGroups']);
 Route::post('import/LearnerGrowthReport', [LeanerGrowthReportController::class, 'importGrowthCSV']);
 Route::post('import/LearnerGrowthReport/handle', [LeanerGrowthReportController::class, 'handle']);
 // import file FlencyBuilder
-Route::post('import/builderReport', [BuilderController::class, 'impocrtBuilderCSV']);
+Route::post('import/builderReport', [BuilderController::class, 'importBuilderCSV']);
 Route::post('import/builderReport/handle', [BuilderController::class, 'handle']);
 //import Fondation File
 Route::post('import/FondationReport', [FondationReportController::class, 'importFondationCSV']);

@@ -12,6 +12,7 @@ class Course extends Model {
     'cours_progress',
     'cours_grade',
     'total_lessons',
+    'note_lesson',
     'result_id', // Foreign key to results table
     'file',
   ];
