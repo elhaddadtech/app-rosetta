@@ -348,8 +348,8 @@ class BuilderController extends Controller {
   // }
 
   public function exportCourseToCsv() {
-    set_time_limit(600);
-    $fileValue = 'builder_2025-01-05';
+    set_time_limit(1200);
+    $fileValue = 'builder_2024-09-04-2025-01-28';
     $fileName  = 'courses_' . $fileValue . '.csv'; // Define the CSV file name
     $filePath  = storage_path('app/public/' . $fileName); // Define the file path
     $handle    = fopen($filePath, 'w'); // Open file for writing
@@ -400,7 +400,7 @@ class BuilderController extends Controller {
       ])
       ->where('c.file', '=', strtolower($fileValue)) // Add the condition here
       ->orderByDesc('c.total_lessons')
-      ->chunk(800, function ($rows) use ($handle) { // Adjust chunk size for optimal performance
+      ->chunk(1000, function ($rows) use ($handle) { // Adjust chunk size for optimal performance
         foreach ($rows as $row) {
           // Write each record to the CSV file
           fputcsv($handle, [

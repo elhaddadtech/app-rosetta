@@ -115,7 +115,6 @@ class SearchController extends Controller {
       ], 404);
     }
 
-    
     // return $student?->results;
     // Transformation des données pour optimisation
     $optimizedResult = [
@@ -157,6 +156,9 @@ class SearchController extends Controller {
                 'progress'      => $course->cours_progress,
                 'grade'         => $course->cours_grade,
                 'total_lessons' => $course->total_lessons,
+                'noteCC1'       => $course->noteCC1,
+                'noteCC2'       => $course->noteCC2,
+                'noteCC'        => $course->noteCC,
               ];
             }),
           ];
