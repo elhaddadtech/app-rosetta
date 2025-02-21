@@ -26,7 +26,7 @@ class UsersImport implements ToCollection, WithHeadingRow {
         // 'last_name'     => 'required|string|max:255',
         // 'first_name'    => 'required|string|max:255',
         'email'         => 'required|email|regex:' . $emailRegex,
-        'cne'           => 'required|string',
+        'cne'           => 'required',
         'institution'   => 'required|string|max:255',
         'role'          => 'required|string|max:255',
         'date_of_birth' => 'required|string|max:255',
@@ -48,7 +48,7 @@ class UsersImport implements ToCollection, WithHeadingRow {
         // }
 
         $this->errors[] = [
-          'row' => $index + 1 + 1, // extra +1 for heder row
+          'row'    => $index + 1 + 1, // extra +1 for heder row
           'errors' => $errors,
 
         ];
@@ -65,7 +65,7 @@ class UsersImport implements ToCollection, WithHeadingRow {
         // dd( $institution->id);
         $role = Role::where('Libelle', strtolower($row['role']))->first();
 
-        $user = User::firstOrCreate([
+        $user = User::updateOrCreate([
           'email' => strtolower($row['email'])], [
           'first_name' => $row['first_name'],
           'last_name'  => $row['last_name'],

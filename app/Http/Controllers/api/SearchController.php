@@ -128,8 +128,8 @@ class SearchController extends Controller {
       'cne'         => $student?->cne ?? 'N/A',
       'apogee'      => $student?->apogee ?? 'N/A',
       'birthdate'   => $student?->birthdate ?? 'N/A',
-      'role'        => 'admin',
-      // 'role'        => $student?->user?->role_libelle ?? null,
+      // 'role'        => 'admin',
+      'role'        => $student?->user?->role_libelle ?? null,
       'languages'   => $student?->results->groupBy('language_libelle')->map(function ($results) {
         return $results->map(function ($result) {
           return [
@@ -159,6 +159,7 @@ class SearchController extends Controller {
                 'noteCC1'       => $course->noteCC1,
                 'noteCC2'       => $course->noteCC2,
                 'noteCC'        => $course->noteCC,
+                'noteExam'      => $course->note_ceef,
               ];
             }),
           ];

@@ -60,6 +60,7 @@ Route::get('coures/export', [BuilderController::class, 'exportCourseToCsv']);
 //Coures controller
 // --------------Results_Stats --------------------------------
 Route::get('learnerGrowth/stats', [ResultsStatsControler::class, 'exportLearnerGrowthToCsv']);
+Route::get('coures/notes', [CoursController::class, 'calculateNotes']);
 
 // Route::get('/user', function (Request $request) {
 //     return $request->user();

@@ -31,7 +31,7 @@ class BuilderController extends Controller {
   // Perform batch insert
   public function handle(Request $request) {
     set_time_limit(400);
-
+     explode( $request->url(),'.')
     // Validate CSV file path
     $request->validate(['csv_path' => 'required']);
 
@@ -349,8 +349,8 @@ class BuilderController extends Controller {
 
   public function exportCourseToCsv() {
     set_time_limit(1200);
-    $fileValue = 'builder_2024-09-04-2025-01-28';
-    $fileName  = 'courses_' . $fileValue . '.csv'; // Define the CSV file name
+    $fileValue = 'foundations_2024_2024-09-04-2025-02-05';
+    $fileName  = 'courses_notes_fssm' . '.csv'; // Define the CSV file name $fileValue .
     $filePath  = storage_path('app/public/' . $fileName); // Define the file path
     $handle    = fopen($filePath, 'w'); // Open file for writing
 
@@ -359,7 +359,7 @@ class BuilderController extends Controller {
 
     // Write the CSV header
     fputcsv($handle, [
-      'File',
+      'Rapport',
       'First Name',
       'Last Name',
       'Email',
@@ -368,10 +368,20 @@ class BuilderController extends Controller {
       'Branch',
       'Group',
       'Semester',
-      'Course Name',
-      'Course Progress',
-      'Course Grade',
       'Total Lessons',
+      'Total Time',
+      'score_test_1',
+      'level_test_1',
+      'score_test_2',
+      'level_test_2',
+      'score_test_3',
+      'level_test_3',
+      'Max_score_test',
+      'Max_level_test',
+      'noteCC1',
+      'noteCC2',
+      'noteCC',
+      'note_ceef',
     ]);
 
     DB::table('results as r')
@@ -384,25 +394,36 @@ class BuilderController extends Controller {
       ->leftJoin('branches as b', 's.branch_id', '=', 'b.id')
       ->leftJoin('semesters as sm', 's.semester_id', '=', 'sm.id')
       ->select([
-        'c.file',
-        'u.first_name',
-        'u.last_name',
         'u.email as user_email',
         'l.libelle as language_libelle',
-        'i.libelle as institution_libelle',
-        'b.libelle as branch_libelle',
-        'g.libelle as group_libelle',
-        'sm.libelle as semester_libelle',
-        'c.cours_name',
-        'c.cours_progress',
-        'c.cours_grade',
-        'c.total_lessons',
+        DB::raw('MAX(c.file) as file'),
+        DB::raw('MAX(u.first_name) as first_name'),
+        DB::raw('MAX(u.last_name) as last_name'),
+        DB::raw('MAX(i.libelle) as institution_libelle'),
+        DB::raw('MAX(b.libelle) as branch_libelle'),
+        DB::raw('MAX(g.libelle) as group_libelle'),
+        DB::raw('MAX(sm.libelle) as semester_libelle'),
+        DB::raw('MAX(c.total_lessons) as total_lessons'),
+        DB::raw('MAX(r.total_time) as total_time'),
+        DB::raw('MAX(r.score_test_1) as score_test_1'),
+        DB::raw('MAX(r.level_test_1) as level_test_1'),
+        DB::raw('MAX(r.score_test_2) as score_test_2'),
+        DB::raw('MAX(r.level_test_2) as level_test_2'),
+        DB::raw('MAX(r.score_test_3) as score_test_3'),
+        DB::raw('MAX(r.level_test_3) as level_test_3'),
+        DB::raw('MAX(r.score_test_4) as score_test_4'),
+        DB::raw('MAX(r.level_test_4) as level_test_4'),
+        DB::raw('GREATEST(MAX(r.score_test_1), MAX(r.score_test_2), MAX(r.score_test_3), MAX(r.score_test_4)) as max_score_test'),
+        DB::raw('MAX(c.noteCC1) as noteCC1'),
+        DB::raw('MAX(c.noteCC2) as noteCC2'),
+        DB::raw('MAX(c.noteCC) as noteCC'),
+        DB::raw('MAX(c.note_ceef) as note_ceef'),
       ])
-      ->where('c.file', '=', strtolower($fileValue)) // Add the condition here
-      ->orderByDesc('c.total_lessons')
-      ->chunk(1000, function ($rows) use ($handle) { // Adjust chunk size for optimal performance
+      ->whereRaw('LOWER(i.libelle) = LOWER(?)', ['fssm'])
+      ->groupBy('u.email', 'l.libelle')
+      ->orderBy('u.email')
+      ->chunk(2000, function ($rows) use ($handle) {
         foreach ($rows as $row) {
-          // Write each record to the CSV file
           fputcsv($handle, [
             $row->file,
             $row->first_name,
@@ -413,13 +434,70 @@ class BuilderController extends Controller {
             $row->branch_libelle,
             $row->group_libelle,
             $row->semester_libelle,
-            $row->cours_name,
-            $row->cours_progress,
-            $row->cours_grade,
             $row->total_lessons,
+            $row->total_time,
+            $row->score_test_1,
+            $row->level_test_1,
+            $row->score_test_2,
+            $row->level_test_2,
+            $row->score_test_3,
+            $row->level_test_3,
+            $row->score_test_4,
+            $row->level_test_4,
+            $row->noteCC1,
+            $row->noteCC2,
+            $row->noteCC,
+            $row->note_ceef,
           ]);
         }
       });
+
+    // DB::table('results as r')
+    // ->join('languages as l', 'r.language_id', '=', 'l.id')
+    // ->join('students as s', 'r.student_id', '=', 's.id')
+    // ->join('users as u', 's.user_id', '=', 'u.id')
+    // ->join('institutions as i', 's.institution_id', '=', 'i.id')
+    // ->join('courses as c', 'c.result_id', '=', 'r.id')
+    // ->leftJoin('groups as g', 's.group_id', '=', 'g.id')
+    // ->leftJoin('branches as b', 's.branch_id', '=', 'b.id')
+    // ->leftJoin('semesters as sm', 's.semester_id', '=', 'sm.id')
+    // ->select([
+    //   'c.file',
+    //   'u.first_name',
+    //   'u.last_name',
+    //   'u.email as user_email',
+    //   'l.libelle as language_libelle',
+    //   'i.libelle as institution_libelle',
+    //   'b.libelle as branch_libelle',
+    //   'g.libelle as group_libelle',
+    //   'sm.libelle as semester_libelle',
+    //   'c.cours_name',
+    //   'c.cours_progress',
+    //   'c.cours_grade',
+    //   'c.total_lessons',
+    // ])
+    // ->where('c.file', '=', strtolower($fileValue)) // Add the condition here
+    // ->orderByDesc('c.total_lessons')
+    // ->chunk(1000, function ($rows) use ($handle) { // Adjust chunk size for optimal performance
+    //   foreach ($rows as $row) {
+    //     // Write each record to the CSV file
+    //     fputcsv($handle, [
+    //       $row->file,
+    //       $row->first_name,
+    //       $row->last_name,
+    //       $row->user_email,
+    //       $row->language_libelle,
+    //       $row->institution_libelle,
+    //       $row->branch_libelle,
+    //       $row->group_libelle,
+    //       $row->semester_libelle,
+    //       $row->cours_name,
+    //       $row->cours_progress,
+    //       $row->cours_grade,
+    //       $row->total_lessons,
+    //     ]);
+    //   }
+    // });
 
     // Return the file as a downloadable response
 

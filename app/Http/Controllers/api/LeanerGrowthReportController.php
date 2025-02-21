@@ -96,32 +96,236 @@ class LeanerGrowthReportController extends Controller {
       return [];
     }
 
-    $extractedData = [];
-    foreach ($rows as $row) {
-      $extractedData[] = [
-        'email'        => isset($row[$emailIndex]) && Str::endsWith($row[$emailIndex], strtolower(env('DOMAIN_NAME'))) ? $row[$emailIndex] : null,
-        'langue'       => isset($row[$LangueIndex]) && Str::contains($row[$LangueIndex], '(') ? trim(Str::before($row[$LangueIndex], '(')) : (isset($row[$LangueIndex]) ? trim($row[$LangueIndex]) : ''),
-        'type_test_1'  => isset($row[$TypeTest1Index]) ? $row[$TypeTest1Index] : null,
-        'date_test_1'  => isset($row[$DateTest1Index]) ? $row[$DateTest1Index] : null,
-        'score_test_1' => isset($row[$Score1Index]) ? $row[$Score1Index] : null,
-        'level_test_1' => isset($row[$TestLevel1Index]) ? $row[$TestLevel1Index] : null,
-        'desktop_time' => isset($row[$DesktopTimeIndex]) ? $row[$DesktopTimeIndex] : null,
-        'mobile_time'  => isset($row[$MobileTimeIndex]) ? $row[$MobileTimeIndex] : null,
-        'test_Time'    => isset($row[$TotalTimeIndex]) ? $row[$TotalTimeIndex] : null,
-        'total_time'   => isset($row[$ProductTimeIndex]) ? $row[$ProductTimeIndex] : null,
-        'type_test_2'  => isset($row[$TypeTest2Index]) ? $row[$TypeTest2Index] : null,
-        'date_test_2'  => isset($row[$DateTest2Index]) ? $row[$DateTest2Index] : null,
-        'score_test_2' => isset($row[$Score2Index]) ? $row[$Score2Index] : null,
-        'level_test_2' => isset($row[$TestLevel2Index]) ? $row[$TestLevel2Index] : null,
-        'type_test_3'  => isset($row[$TypeTest3Index]) ? $row[$TypeTest3Index] : null,
-        'date_test_3'  => isset($row[$DateTest3Index]) ? $row[$DateTest3Index] : null,
-        'score_test_3' => isset($row[$Score3Index]) ? $row[$Score3Index] : null,
-        'level_test_3' => isset($row[$TestLevel3Index]) ? $row[$TestLevel3Index] : null,
-      ];
-    }
-    // dd($header);
+    // Test types
+    $test1_type = 'Placement for Catalyst';
+    $test2_type = 'Proficiency Test 1';
+    $test3_type = 'Proficiency Test 2';
+    $test4_type = 'Proficiency Test 3';
 
-    return array_filter($extractedData, fn($data) => !empty($data['email']));
+    $extractedData = [];
+
+// Helper function to convert HH:MM:SS to seconds
+    function timeToSeconds($time) {
+      if (!$time) {
+        return 0;
+      }
+      // Handle empty or null values
+      $parts = explode(':', $time);
+      if (count($parts) == 3) {
+        return ($parts[0] * 3600) + ($parts[1] * 60) + $parts[2];
+      }
+
+      return 0;
+    }
+
+// Helper function to convert seconds back to HH:MM:SS format
+    function secondsToTime($seconds) {
+      return sprintf('%02d:%02d:%02d', floor($seconds / 3600), floor(($seconds % 3600) / 60), $seconds % 60);
+    }
+
+// Extract relevant data from rows
+    foreach ($rows as $row) {
+      $email  = isset($row[$emailIndex]) && Str::endsWith($row[$emailIndex], strtolower(env('DOMAIN_NAME'))) ? $row[$emailIndex] : null;
+      $langue = isset($row[$LangueIndex]) && Str::contains($row[$LangueIndex], '(')
+      ? trim(Str::before($row[$LangueIndex], '('))
+      : (isset($row[$LangueIndex]) ? trim($row[$LangueIndex]) : '');
+
+      $data = [
+        'email'        => $email,
+        'langue'       => $langue,
+        'desktop_time' => $row[$DesktopTimeIndex] ?? '00:00:00',
+        'mobile_time'  => $row[$MobileTimeIndex] ?? '00:00:00',
+        'test_Time'    => $row[$TotalTimeIndex] ?? '00:00:00',
+        'total_time'   => $row[$ProductTimeIndex] ?? '00:00:00',
+        'type_test_1'  => null,
+
+        'date_test_1'  => null,
+        'score_test_1' => null, 'level_test_1' => null,
+        'type_test_2'  => null,
+
+        'date_test_2'  => null,
+        'score_test_2' => null, 'level_test_2' => null,
+
+        'type_test_3'  => null,
+        'date_test_3'  => null,
+        'score_test_3' => null,
+        'level_test_3' => null,
+        'score_test_4' => null,
+        'level_test_4' => null,
+      ];
+
+      // Check for Test 1 (Placement for Catalyst)
+      if (isset($row[$TypeTest1Index]) && strtolower($row[$TypeTest1Index]) == strtolower($test1_type)) {
+        $data['type_test_1']  = $row[$TypeTest1Index] ?? null;
+        $data['date_test_1']  = $row[$DateTest1Index] ?? null;
+        $data['score_test_1'] = $row[$Score1Index] ?? null;
+        $data['level_test_1'] = $row[$TestLevel1Index] ?? null;
+        $data['type_test_2']  = $row[$TypeTest2Index] ?? null;
+        $data['date_test_2']  = $row[$DateTest2Index] ?? null;
+        $data['score_test_2'] = $row[$Score2Index] ?? null;
+        $data['level_test_2'] = $row[$TestLevel2Index] ?? null;
+      }
+
+      // Check for Test 2 (Proficiency Test 1)
+      if (isset($row[$TypeTest1Index]) && strtolower($row[$TypeTest1Index]) == strtolower($test2_type)) {
+        $data['type_test_2']  = $row[$TypeTest1Index] ?? null;
+        $data['date_test_2']  = $row[$DateTest1Index] ?? null;
+        $data['score_test_2'] = $row[$Score1Index] ?? null;
+        $data['level_test_2'] = $row[$TestLevel1Index] ?? null;
+      }
+
+      // Check for Test 3 (Proficiency Test 2)
+      if (isset($row[$TypeTest3Index]) && strtolower($row[$TypeTest3Index]) == strtolower($test3_type)) {
+        $data['type_test_3']  = $row[$TypeTest3Index] ?? null;
+        $data['date_test_3']  = $row[$DateTest3Index] ?? null;
+        $data['score_test_3'] = $row[$Score3Index] ?? null;
+        $data['level_test_3'] = $row[$TestLevel3Index] ?? null;
+      }
+      // Check for Test 3 (Proficiency Test 2)
+      if (isset($row[$TypeTest2Index]) && strtolower($row[$TypeTest2Index]) == strtolower($test3_type)) {
+        $data['type_test_3']  = $row[$TypeTest2Index] ?? null;
+        $data['date_test_3']  = $row[$DateTest2Index] ?? null;
+        $data['score_test_3'] = $row[$Score2Index] ?? null;
+        $data['level_test_3'] = $row[$TestLevel2Index] ?? null;
+      }
+      if (
+        isset($row[$TypeTest1Index]) && strtolower($row[$TypeTest1Index]) == strtolower($test2_type)
+        && isset($row[$TypeTest2Index]) && strtolower($row[$TypeTest2Index]) == strtolower($test3_type)
+        && isset($row[$TypeTest3Index]) && strtolower($row[$TypeTest3Index]) == strtolower($test4_type)
+      ) {
+
+        $data['type_test_1']  = $row[$TypeTest1Index] ?? null;
+        $data['date_test_1']  = $row[$DateTest1Index] ?? null;
+        $data['score_test_1'] = $row[$Score1Index] ?? null;
+        $data['level_test_1'] = $row[$TestLevel1Index] ?? null;
+
+        $data['type_test_2']  = $row[$TypeTest2Index] ?? null;
+        $data['date_test_2']  = $row[$DateTest2Index] ?? null;
+        $data['score_test_2'] = $row[$Score2Index] ?? null;
+        $data['level_test_2'] = $row[$TestLevel2Index] ?? null;
+
+        $data['type_test_3']  = $row[$TypeTest3Index] ?? null;
+        $data['date_test_3']  = $row[$DateTest3Index] ?? null;
+        $data['score_test_3'] = $row[$Score3Index] ?? null;
+        $data['level_test_3'] = $row[$TestLevel3Index] ?? null;
+      }
+      if (
+        isset($row[$TypeTest1Index]) && strtolower($row[$TypeTest1Index]) == strtolower($test2_type)
+        && isset($row[$TypeTest2Index]) && strtolower($row[$TypeTest2Index]) == strtolower($test3_type)
+        && isset($row[$TypeTest3Index]) && strtolower($row[$TypeTest3Index]) == strtolower($test3_type)
+      ) {
+
+        $data['type_test_1']  = $row[$TypeTest1Index] ?? null;
+        $data['date_test_1']  = $row[$DateTest1Index] ?? null;
+        $data['score_test_1'] = $row[$Score1Index] ?? null;
+        $data['level_test_1'] = $row[$TestLevel1Index] ?? null;
+
+        $data['type_test_2']  = $row[$TypeTest2Index] ?? null;
+        $data['date_test_2']  = $row[$DateTest2Index] ?? null;
+        $data['score_test_2'] = $row[$Score2Index] ?? null;
+        $data['level_test_2'] = $row[$TestLevel2Index] ?? null;
+
+        $data['type_test_3']  = $row[$TypeTest3Index] ?? null;
+        $data['date_test_3']  = $row[$DateTest3Index] ?? null;
+        $data['score_test_3'] = $row[$Score3Index] ?? null;
+        $data['level_test_3'] = $row[$TestLevel3Index] ?? null;
+      }
+      $extractedData[] = $data;
+    }
+
+// Define the required keys
+    $requiredKeys = [
+      'email', 'langue',
+      'desktop_time', 'mobile_time', 'test_Time', 'total_time',
+      'type_test_1', 'date_test_1', 'score_test_1', 'level_test_1',
+      'type_test_2', 'date_test_2', 'score_test_2', 'level_test_2',
+      'type_test_3', 'date_test_3', 'score_test_3', 'level_test_3',
+      'score_test_4', 'level_test_4',
+    ];
+
+    $mergedData = [];
+
+// Process each object in the dataset
+    foreach ($extractedData as $item) {
+      $key = $item['email'] . '|' . $item['langue'];
+
+      // If this email-language combination doesn't exist, initialize it
+      if (!isset($mergedData[$key])) {
+        $mergedData[$key]                 = array_fill_keys($requiredKeys, null);
+        $mergedData[$key]['email']        = $item['email'];
+        $mergedData[$key]['langue']       = $item['langue'];
+        $mergedData[$key]['desktop_time'] = 0;
+        $mergedData[$key]['mobile_time']  = 0;
+        $mergedData[$key]['total_time']   = 0;
+      }
+
+      // Merge test data, keeping the latest or most complete values
+      foreach (['type_test_1', 'date_test_1', 'score_test_1', 'level_test_1',
+        'type_test_2', 'date_test_2', 'score_test_2', 'level_test_2',
+        'type_test_3', 'date_test_3', 'score_test_3', 'level_test_3', 'score_test_4', 'level_test_4'] as $testKey) {
+        if (!empty($item[$testKey])) {
+          $mergedData[$key][$testKey] = $item[$testKey];
+        }
+
+      }
+
+      // Sum time values
+      $mergedData[$key]['desktop_time'] += timeToSeconds($item['desktop_time'] ?? '00:00:00');
+      $mergedData[$key]['mobile_time'] += timeToSeconds($item['mobile_time'] ?? '00:00:00');
+      $mergedData[$key]['total_time'] += timeToSeconds($item['total_time'] ?? '00:00:00');
+    }
+
+// Convert seconds back to HH:MM:SS format
+    foreach ($mergedData as &$data) {
+      $data['desktop_time'] = secondsToTime($data['desktop_time']);
+      $data['mobile_time']  = secondsToTime($data['mobile_time']);
+      $data['total_time']   = secondsToTime($data['total_time']);
+    }
+
+//     }
+    foreach ($mergedData as &$data) {
+      // Extract scores correctly
+      $score2 = isset($data['score_test_2']) ? explode('/', $data['score_test_2'])[0] : null;
+      $score3 = isset($data['score_test_3']) ? explode('/', $data['score_test_3'])[0] : null;
+
+      // Trim values and convert to integers
+      $score2 = is_numeric(trim($score2)) ? (int) trim($score2) : null;
+      $score3 = is_numeric(trim($score3)) ? (int) trim($score3) : null;
+
+      // Determine max score
+      if (!is_null($score2) && !is_null($score3)) {
+        $data['score_test_4'] = max($score2, $score3) . '/400';
+      } elseif (!is_null($score2) && is_null($score3)) {
+        $data['score_test_4'] = $score2 . '/400';
+      } else {
+        $data['score_test_4'] = null;
+      }
+
+      // Extract levels
+      $level2 = $data['level_test_2'] ?? null;
+      $level3 = $data['level_test_3'] ?? null;
+
+      // Ensure values are trimmed and processed correctly
+      $level2 = trim($level2);
+      $level3 = trim($level3);
+
+      // Determine max level
+      if (!is_null($level2) && !is_null($level3)) {
+        $data['level_test_4'] = max($level2, $level3);
+      } elseif (!is_null($level2) && is_null($level3)) {
+        $data['level_test_4'] = $level2;
+      } else {
+        $data['level_test_4'] = null;
+      }
+    }
+
+// Unset reference to avoid unintended modifications
+    unset($data);
+
+    $mergedData = array_values($mergedData);
+    // $jsonData   = json_encode($mergedData, JSON_PRETTY_PRINT);
+
+    return array_filter($mergedData, fn($data) => !empty($data['email']));
   }
 
   private function processLanguageData($records) {
@@ -137,7 +341,7 @@ class LeanerGrowthReportController extends Controller {
       $finalLevel = '';
 
       foreach ($records as $record) {
-        $currentScore = explode('/', $record['score_test_1'])[0] ?? 0;
+        $currentScore = $record['score_test_1'] ?? 0;
         if ($currentScore > $finalScore) {
           $finalScore = $currentScore;
           $finalLevel = $record['level_test_1'] ?? '';
@@ -161,7 +365,7 @@ class LeanerGrowthReportController extends Controller {
         'langue'       => $record['langue'] ?? null,
         'type_test_1'  => $record['type_test_1'] ?? null,
         'date_test_1'  => $record['date_test_1'] ?? null,
-        'score_test_1' => "{$finalScore}/400",
+        'score_test_1' => $finalScore,
         'level_test_1' => $finalLevel,
         'desktop_time' => $formattedTimes['desktop'],
         'mobile_time'  => $formattedTimes['mobile'],
@@ -177,8 +381,8 @@ class LeanerGrowthReportController extends Controller {
         'level_test_3' => $record['level_test_3'] ?? null,
         // 'type_test_4'  => $record['type_test_4'] ?? null,
         // 'date_test_4'  => $record['date_test_4'] ?? null,
-        // 'score_test_4' => $record['score_test_4'] ?? null,
-        // 'level_test_4' => $record['level_test_4'] ?? null,
+        'score_test_4' => $record['score_test_4'] ?? null,
+        'level_test_4' => $record['level_test_4'] ?? null,
       ];
     });
   }
@@ -200,7 +404,9 @@ class LeanerGrowthReportController extends Controller {
     try {
       Log::info('Job started for file: {}');
       // dd($filePath);
+
       $data = $this->processCSV($request->csv_path);
+
       if (empty($data)) {
         Log::warning('No valid data found in the CSV file.');
 
@@ -231,7 +437,6 @@ class LeanerGrowthReportController extends Controller {
       $existingLanguages = Language::pluck('id', 'libelle')->mapWithKeys(function ($value, $key) {
         return [strtolower($key) => $value];
       });
-
       $newLanguages = [];
       // Process data
       foreach ($processedData as $dataa) {
@@ -250,6 +455,8 @@ class LeanerGrowthReportController extends Controller {
         }
 
         $batchInsertData[] = [
+          // 'email'        => $email,
+          // 'langue'       => $langue,
           'language_id'  => $langue && isset($existingLanguages[$langue]) ? $existingLanguages[$langue] : null,
           'student_id'   => $studentId,
           'type_test_1'  => $dataa['type_test_1'],
@@ -268,10 +475,9 @@ class LeanerGrowthReportController extends Controller {
           'date_test_3'  => $dataa['date_test_3'],
           'score_test_3' => $dataa['score_test_3'],
           'level_test_3' => $dataa['level_test_3'],
-          // 'type_test_4'  => $dataa['type_test_4'],
-          // 'date_test_4'  => $dataa['date_test_4'],
-          // 'score_test_4' => $dataa['score_test_4'],
-          // 'level_test_4' => $dataa['level_test_4'],
+
+          'score_test_4' => $dataa['score_test_4'],
+          'level_test_4' => $dataa['level_test_4'],
           'file'         => strtolower($this->fileName),
         ];
       }
@@ -289,6 +495,16 @@ class LeanerGrowthReportController extends Controller {
           $data['language_id'] = $existingLanguages[$langue] ?? null;
         }
       }
+
+      // /// Convert extracted data to JSON format
+      // $jsonData = json_encode($batchInsertData, JSON_PRETTY_PRINT);
+
+      // // Define the file path
+      // $filePath = storage_path('app/extracted_data1.json'); // Store inside Laravel storage/app folder
+
+      // // Store the JSON data into the file
+      // file_put_contents($filePath, $jsonData);
+      // dd('success');
 
       // Perform batch insert
       DB::transaction(function () use ($batchInsertData) {

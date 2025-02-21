@@ -54,7 +54,6 @@ class FondationReportController extends Controller {
 
       // Process students and prepare course data
       $coursesToInsert = $this->processStudents($data);
-      dd($coursesToInsert);
 
       return response()->json([
         'status'  => true,
