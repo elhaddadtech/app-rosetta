@@ -94,7 +94,7 @@ class CoursController extends Controller {
         DB::raw('MAX(r.score_test_4) as score_test_4'),
       ])
       ->whereNotNull('r.score_test_4') // Ensures score_test_4 is not NULL
-      ->whereRaw('LOWER(r.file) = LOWER(?)', [strtolower('learnergrowth_2025-02-13')]) // Case-insensitive file filter
+      ->whereRaw('LOWER(r.file) = LOWER(?)', [strtolower('learnergrowth_2025-02-27')]) // Case-insensitive file filter
       ->groupBy('u.email', 'l.libelle', 'r.student_id', 'r.language_id') // Group by unique `email` and `language`
       ->get();
 

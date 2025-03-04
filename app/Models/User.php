@@ -12,7 +12,7 @@ use Laravel\Sanctum\HasApiTokens;
 
 class User extends Authenticatable {
   /** @use HasFactory<\Database\Factories\UserFactory> */
-  use HasFactory, Notifiable, HasApiTokens,SoftDeletes;
+  use HasFactory, Notifiable, HasApiTokens, SoftDeletes;
 
   /**
    * The attributes that are mass assignable.
@@ -61,6 +61,13 @@ class User extends Authenticatable {
 
     return $student?->libelle;
   }
+
+  public function getInstitutionIdAttribute() {
+    $student = $this->student?->institution;
+
+    return $student?->id;
+  }
+
   public function getFullNameAttribute() {
     return "{$this->first_name} {$this->last_name}";
   }
@@ -87,11 +94,10 @@ class User extends Authenticatable {
    */
   protected $hidden = [
     'remember_token',
-    'first_name',
-    'last_name',
+
     'created_at',
     'updated_at',
-    "delete_at",
+    'delete_at',
     'role',
     'student',
   ];
@@ -102,6 +108,7 @@ class User extends Authenticatable {
     'apogee',
     'birthdate',
     'institution_libelle',
+    'institution_id',
     'group_libelle',
     'branch_libelle',
     'semester_libelle',

@@ -12,8 +12,8 @@ class Institution extends Model {
   ];
   protected $hidden = [
     'deleted_at',
-    'create_at',
-    'update_at',
+    'created_at',
+    'updated_at',
   ];
   protected $table = 'institutions';
 }

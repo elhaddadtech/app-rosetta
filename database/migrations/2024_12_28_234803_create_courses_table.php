@@ -18,6 +18,7 @@ return new class extends Migration {
       $table->string('noteCC1', 20)->nullable(); // Note for CC1  (nullable if no note)
       $table->string('noteCC2', 20)->nullable(); // Note for CC2 (nullable if no note)
       $table->string('noteCC', 20)->nullable(); // Note for CC (nullable if no note)
+      $table->string('note_ceef', 20)->nullable(); // Note for CC (nullable if no note)
 
       // Foreign key to the results table
       $table->unsignedBigInteger('result_id'); // Foreign key column

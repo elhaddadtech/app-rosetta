@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Student;
 use App\Models\User;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 
 class SearchController extends Controller {
   public function usersSearch(Request $request) {
@@ -128,8 +129,8 @@ class SearchController extends Controller {
       'cne'         => $student?->cne ?? 'N/A',
       'apogee'      => $student?->apogee ?? 'N/A',
       'birthdate'   => $student?->birthdate ?? 'N/A',
-      // 'role'        => 'admin',
-      'role'        => $student?->user?->role_libelle ?? null,
+      'role'        => 'admin',
+      // 'role'        => $student?->user?->role_libelle ?? null,
       'languages'   => $student?->results->groupBy('language_libelle')->map(function ($results) {
         return $results->map(function ($result) {
           return [
@@ -175,6 +176,47 @@ class SearchController extends Controller {
       'result' => $optimizedResult,
     ]);
 
+  }
+
+  public function StatStudents() {
+    $totalUsers               = DB::table('users')->count();
+    $totalStudentsWithResults = DB::table('results')->distinct('student_id')->count();
+    $usersNotInResults        = DB::table('users')
+      ->whereNotIn('id', function ($query) {
+        $query->select('student_id')->from('results');
+      })
+      ->count();
+
+    return response()->json([
+      'total_students'          => $totalUsers,
+      'total_students_active'   => $totalStudentsWithResults,
+      'total_students_inactive' => $usersNotInResults,
+    ]);
+
+  }
+  public function searchByInstitution(Request $request) {
+    //search by institution relation between user ,student and institution
+
+    $students = User::whereHas('student', function ($query) use ($request) {
+      $query->where('institution_id', $request->institution_id); // Replace with your condition
+    })->paginate(30);
+
+    return response()->json([
+      'students' => $students,
+    ]);
+  }
+
+  public function searchByParams(Request $request) {
+    $search   = trim(strtolower($request->search));
+    $students = User::whereHas('student', function ($q) use ($search) {
+      $q->where('first_name', 'like', "%{$search}%")
+        ->orWhere('last_name', 'like', "%{$search}%")
+        ->orWhere('email', 'like', "%{$search}%");
+    })->paginate(30);
+
+    return response()->json([
+      'students' => $students,
+    ]);
   }
 
 }

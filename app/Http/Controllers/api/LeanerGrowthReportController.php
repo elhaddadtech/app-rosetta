@@ -21,6 +21,10 @@ class LeanerGrowthReportController extends Controller {
   public $usersNull = [];
 
   public function importGrowthCSV(Request $request) {
+    // / Changer temporairement la taille maximale des fichiers téléchargés
+    return 'ok';
+    ini_set('post_max_size', '1024M'); // Définit la taille maximale des données POST
+    ini_set('upload_max_filesize', '1024M'); // Définit la taille maximale des fichiers téléchargés
 
     $request->validate(['csv_file' => 'required|file|mimes:csv,txt']);
     $fileName = $request->file('csv_file')->getClientOriginalName();
@@ -551,6 +555,7 @@ class LeanerGrowthReportController extends Controller {
   }
 
   public function exportResultsToCsv() {
+    ini_set('max_execution_time', 300);
     $fileName = 'LearnerGrowth_results' . '.csv'; // Generate file name with timestamp
     $filePath = storage_path('app/public/' . $fileName); // Define file path
     $handle   = fopen($filePath, 'w'); // Open file for writing

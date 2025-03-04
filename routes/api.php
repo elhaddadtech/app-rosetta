@@ -34,7 +34,9 @@ Route::apiResource('courses', CoursController::class);
 
 //----------------------Search Api ----------------------------
 Route::post('search/user', [SearchController::class, 'searchUsers']);
-
+Route::get('students/stats', [SearchController::class, 'StatStudents']);
+Route::post('students/institution', [SearchController::class, 'searchByInstitution']);
+Route::post('students/search', [SearchController::class, 'searchByParams']);
 //-------------Import CSV Files ------------------------
 Route::post('/students/import', [ImportController::class, 'importStudents']);
 Route::post('/teachers/import', [TeacherController::class, 'importTeachers']);
@@ -52,7 +54,7 @@ Route::post('import/FondationReport/handle', [FondationReportController::class, 
 //---------------Export CSV Files ------------------------
 
 Route::get('builderReport/export', [BuilderController::class, 'exportToExcel']);
-Route::get('users/export', [UserController::class, 'export']);
+Route::post('students/export', [UserController::class, 'exportStudents']);
 
 Route::get('learnerGrowth/export', [LeanerGrowthReportController::class, 'ExportDataLearnerGrowth']);
 Route::get('learnerGrowth/results/export', [LeanerGrowthReportController::class, 'exportResultsToCsv']);

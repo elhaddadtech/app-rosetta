@@ -2,30 +2,80 @@
 
 namespace App\Http\Controllers\api;
 
-use App\Exports\ExtractedDataExport;
 use App\Http\Controllers\Controller;
 // use App\Imports\UsersImport;
 use App\Http\Resources\UserResource;
+use App\Models\Institution;
 use App\Models\User;
 use Illuminate\Http\Request;
-use Maatwebsite\Excel\Excel;
 
 class UserController extends Controller {
 
-  public function export()
-    {
-      return Excel::download(new ExtractedDataExport, 'users.xlsx');
+  public function exportStudents(Request $request) {
+    ini_set('max_execution_time', 300);
+    // Retrieve institution_id from the request $request->institution_id
+    $institution_id = $request->institution_id;
+    $institution    = Institution::findOrFail($institution_id);
+    // Generate file name with timestamp
+    $fileName = 'Students_' . $institution->libelle . '.csv';
+    $filePath = storage_path('app/public/' . $fileName); // Define file path
+
+    // Open file for writing
+    $handle = fopen($filePath, 'w');
+
+    // Add BOM for UTF-8 encoding
+    fwrite($handle, "\xEF\xBB\xBF");
+
+    // Write the CSV header
+    fputcsv($handle, [
+      'First Name', 'Last Name', 'Email', 'Institution', 'Branch', 'Group',
+      'Semester', 'CNE', 'Apogee', 'Birthdate', 'Role',
+    ]);
+
+    // Query to get users with their student data filtered by institution_id
+    $students = User::whereHas('student', function ($query) use ($institution_id) {
+      $query->where('institution_id', $institution_id);
+    })->get();
+
+    // Check if any students are found
+    if ($students->isEmpty()) {
+      return response()->json(['message' => 'No students found for this institution'], 404);
     }
 
-  public function index() {
-    //   return User::with('role', 'student')->get()->map(function ($user) {
-    //     $user->full_name; // Access the accessor
-    //     return $user;
-    // });
-    $users = User::all(); // Eager load the role relationship
+    // Process each student
+    foreach ($students as $student) {
+      fputcsv($handle, [
+        strtolower($student->first_name),
+        strtolower($student->last_name),
+        strtolower($student->email),
+        strtoupper($student->institution_libelle), // assuming this is part of the student model
+        strtoupper($student->branch_libelle) ?? 'N/A', // If branch is null, set to N/A
+        strtoupper($student->group_libelle) ?? 'N/A', // If group is null, set to N/A
+        strtoupper($student->semester_libelle), // Assuming semester information is available
+        strtoupper($student->cne),
+        $student->apogee,
+        $student->birthdate,
+        $student->role_libelle,
 
-    return $users;
-    // return UserResource::collection($users); // Return a collection of UserResource
+      ]);
+    }
+
+    fclose($handle); // Close the file after writing
+
+    // Return the file as a downloadable response and delete it after sending
+
+    return response()->download($filePath)->deleteFileAfterSend(true);
+
+  }
+
+  public function index() {
+    $students    = User::paginate(30); // Vous pouvez ajuster le nombre d'éléments par page ici
+    $institution = Institution::all()->unique('libelle');
+
+    return response()->json([
+      'students'     => $students,
+      'institutions' => $institution,
+    ]);
 
   }
 
@@ -77,7 +127,5 @@ class UserController extends Controller {
 
     return response()->json(['success' => true, 'message' => 'User deleted successfully'], 200);
   }
-
-// Upload files to database
 
 }

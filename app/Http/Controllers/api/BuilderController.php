@@ -31,7 +31,7 @@ class BuilderController extends Controller {
   // Perform batch insert
   public function handle(Request $request) {
     set_time_limit(400);
-     explode( $request->url(),'.')
+
     // Validate CSV file path
     $request->validate(['csv_path' => 'required']);
 
@@ -350,7 +350,7 @@ class BuilderController extends Controller {
   public function exportCourseToCsv() {
     set_time_limit(1200);
     $fileValue = 'foundations_2024_2024-09-04-2025-02-05';
-    $fileName  = 'courses_notes_fssm' . '.csv'; // Define the CSV file name $fileValue .
+    $fileName  = 'courses_notes_flam' . '.csv'; // Define the CSV file name $fileValue .
     $filePath  = storage_path('app/public/' . $fileName); // Define the file path
     $handle    = fopen($filePath, 'w'); // Open file for writing
 
@@ -419,7 +419,7 @@ class BuilderController extends Controller {
         DB::raw('MAX(c.noteCC) as noteCC'),
         DB::raw('MAX(c.note_ceef) as note_ceef'),
       ])
-      ->whereRaw('LOWER(i.libelle) = LOWER(?)', ['fssm'])
+      ->whereRaw('LOWER(i.libelle) = LOWER(?)', ['flam'])
       ->groupBy('u.email', 'l.libelle')
       ->orderBy('u.email')
       ->chunk(2000, function ($rows) use ($handle) {
