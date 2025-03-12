@@ -22,7 +22,7 @@ class LeanerGrowthReportController extends Controller {
 
   public function importGrowthCSV(Request $request) {
     // / Changer temporairement la taille maximale des fichiers téléchargés
-    return 'ok';
+
     ini_set('post_max_size', '1024M'); // Définit la taille maximale des données POST
     ini_set('upload_max_filesize', '1024M'); // Définit la taille maximale des fichiers téléchargés
 
@@ -38,25 +38,29 @@ class LeanerGrowthReportController extends Controller {
   }
 
   private function processCSV($path) {
-    if (!file_exists($path)) {
-      Log::error("File not found: {$path}");
+    // if (!file_exists($path)) {
 
-      return [];
-    }
+    //   Log::error("File not found: {$path}");
+
+    //   return [];
+    // }
 
     $rows           = [];
     $desiredColumns = [3, 5, 8, 10, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28]; // Specify the indices of the columns you want to extract (e.g., column 0 and column 2)
 
     if (($handle = fopen($path, 'r')) !== false) {
       while (($data = fgetcsv($handle, 1000, ',')) !== false) {
+
         // Extract only the columns you need
         $filteredRow = array_intersect_key($data, array_flip($desiredColumns));
         $rows[]      = $filteredRow;
+
       }
       fclose($handle);
     }
 
     $header = array_shift($rows);
+
     if (!$header) {
       Log::error('CSV file is empty or header is missing.');
 
@@ -97,7 +101,7 @@ class LeanerGrowthReportController extends Controller {
     if (!empty($missingHeaders)) {
       Log::error('Missing required headers: ' . implode(', ', array_keys($missingHeaders)));
 
-      return [];
+      // return [];
     }
 
     // Test types
@@ -129,6 +133,7 @@ class LeanerGrowthReportController extends Controller {
 
 // Extract relevant data from rows
     foreach ($rows as $row) {
+
       $email  = isset($row[$emailIndex]) && Str::endsWith($row[$emailIndex], strtolower(env('DOMAIN_NAME'))) ? $row[$emailIndex] : null;
       $langue = isset($row[$LangueIndex]) && Str::contains($row[$LangueIndex], '(')
       ? trim(Str::before($row[$LangueIndex], '('))
@@ -177,63 +182,66 @@ class LeanerGrowthReportController extends Controller {
         $data['score_test_2'] = $row[$Score1Index] ?? null;
         $data['level_test_2'] = $row[$TestLevel1Index] ?? null;
       }
+      if ($indices[14]) {
+        // Check for Test 3 (Proficiency Test 2)
+        if (isset($row[$TypeTest3Index]) && strtolower($row[$TypeTest3Index]) == strtolower($test3_type)) {
+          $data['type_test_3']  = $row[$TypeTest3Index] ?? null;
+          $data['date_test_3']  = $row[$DateTest3Index] ?? null;
+          $data['score_test_3'] = $row[$Score3Index] ?? null;
+          $data['level_test_3'] = $row[$TestLevel3Index] ?? null;
+        }
+        // Check for Test 3 (Proficiency Test 2)
+        if (isset($row[$TypeTest2Index]) && strtolower($row[$TypeTest2Index]) == strtolower($test3_type)) {
+          $data['type_test_3']  = $row[$TypeTest2Index] ?? null;
+          $data['date_test_3']  = $row[$DateTest2Index] ?? null;
+          $data['score_test_3'] = $row[$Score2Index] ?? null;
+          $data['level_test_3'] = $row[$TestLevel2Index] ?? null;
+        }
+        if (
+          isset($row[$TypeTest1Index]) && strtolower($row[$TypeTest1Index]) == strtolower($test2_type)
+          && isset($row[$TypeTest2Index]) && strtolower($row[$TypeTest2Index]) == strtolower($test3_type)
+          && isset($row[$TypeTest3Index]) && strtolower($row[$TypeTest3Index]) == strtolower($test4_type)
+        ) {
 
-      // Check for Test 3 (Proficiency Test 2)
-      if (isset($row[$TypeTest3Index]) && strtolower($row[$TypeTest3Index]) == strtolower($test3_type)) {
-        $data['type_test_3']  = $row[$TypeTest3Index] ?? null;
-        $data['date_test_3']  = $row[$DateTest3Index] ?? null;
-        $data['score_test_3'] = $row[$Score3Index] ?? null;
-        $data['level_test_3'] = $row[$TestLevel3Index] ?? null;
+          $data['type_test_1']  = $row[$TypeTest1Index] ?? null;
+          $data['date_test_1']  = $row[$DateTest1Index] ?? null;
+          $data['score_test_1'] = $row[$Score1Index] ?? null;
+          $data['level_test_1'] = $row[$TestLevel1Index] ?? null;
+
+          $data['type_test_2']  = $row[$TypeTest2Index] ?? null;
+          $data['date_test_2']  = $row[$DateTest2Index] ?? null;
+          $data['score_test_2'] = $row[$Score2Index] ?? null;
+          $data['level_test_2'] = $row[$TestLevel2Index] ?? null;
+
+          $data['type_test_3']  = $row[$TypeTest3Index] ?? null;
+          $data['date_test_3']  = $row[$DateTest3Index] ?? null;
+          $data['score_test_3'] = $row[$Score3Index] ?? null;
+          $data['level_test_3'] = $row[$TestLevel3Index] ?? null;
+        }
+        if (
+          isset($row[$TypeTest1Index]) && strtolower($row[$TypeTest1Index]) == strtolower($test2_type)
+          && isset($row[$TypeTest2Index]) && strtolower($row[$TypeTest2Index]) == strtolower($test3_type)
+          && isset($row[$TypeTest3Index]) && strtolower($row[$TypeTest3Index]) == strtolower($test3_type)
+        ) {
+
+          $data['type_test_1']  = $row[$TypeTest1Index] ?? null;
+          $data['date_test_1']  = $row[$DateTest1Index] ?? null;
+          $data['score_test_1'] = $row[$Score1Index] ?? null;
+          $data['level_test_1'] = $row[$TestLevel1Index] ?? null;
+
+          $data['type_test_2']  = $row[$TypeTest2Index] ?? null;
+          $data['date_test_2']  = $row[$DateTest2Index] ?? null;
+          $data['score_test_2'] = $row[$Score2Index] ?? null;
+          $data['level_test_2'] = $row[$TestLevel2Index] ?? null;
+
+          $data['type_test_3']  = $row[$TypeTest3Index] ?? null;
+          $data['date_test_3']  = $row[$DateTest3Index] ?? null;
+          $data['score_test_3'] = $row[$Score3Index] ?? null;
+          $data['level_test_3'] = $row[$TestLevel3Index] ?? null;
+        }
+
       }
-      // Check for Test 3 (Proficiency Test 2)
-      if (isset($row[$TypeTest2Index]) && strtolower($row[$TypeTest2Index]) == strtolower($test3_type)) {
-        $data['type_test_3']  = $row[$TypeTest2Index] ?? null;
-        $data['date_test_3']  = $row[$DateTest2Index] ?? null;
-        $data['score_test_3'] = $row[$Score2Index] ?? null;
-        $data['level_test_3'] = $row[$TestLevel2Index] ?? null;
-      }
-      if (
-        isset($row[$TypeTest1Index]) && strtolower($row[$TypeTest1Index]) == strtolower($test2_type)
-        && isset($row[$TypeTest2Index]) && strtolower($row[$TypeTest2Index]) == strtolower($test3_type)
-        && isset($row[$TypeTest3Index]) && strtolower($row[$TypeTest3Index]) == strtolower($test4_type)
-      ) {
 
-        $data['type_test_1']  = $row[$TypeTest1Index] ?? null;
-        $data['date_test_1']  = $row[$DateTest1Index] ?? null;
-        $data['score_test_1'] = $row[$Score1Index] ?? null;
-        $data['level_test_1'] = $row[$TestLevel1Index] ?? null;
-
-        $data['type_test_2']  = $row[$TypeTest2Index] ?? null;
-        $data['date_test_2']  = $row[$DateTest2Index] ?? null;
-        $data['score_test_2'] = $row[$Score2Index] ?? null;
-        $data['level_test_2'] = $row[$TestLevel2Index] ?? null;
-
-        $data['type_test_3']  = $row[$TypeTest3Index] ?? null;
-        $data['date_test_3']  = $row[$DateTest3Index] ?? null;
-        $data['score_test_3'] = $row[$Score3Index] ?? null;
-        $data['level_test_3'] = $row[$TestLevel3Index] ?? null;
-      }
-      if (
-        isset($row[$TypeTest1Index]) && strtolower($row[$TypeTest1Index]) == strtolower($test2_type)
-        && isset($row[$TypeTest2Index]) && strtolower($row[$TypeTest2Index]) == strtolower($test3_type)
-        && isset($row[$TypeTest3Index]) && strtolower($row[$TypeTest3Index]) == strtolower($test3_type)
-      ) {
-
-        $data['type_test_1']  = $row[$TypeTest1Index] ?? null;
-        $data['date_test_1']  = $row[$DateTest1Index] ?? null;
-        $data['score_test_1'] = $row[$Score1Index] ?? null;
-        $data['level_test_1'] = $row[$TestLevel1Index] ?? null;
-
-        $data['type_test_2']  = $row[$TypeTest2Index] ?? null;
-        $data['date_test_2']  = $row[$DateTest2Index] ?? null;
-        $data['score_test_2'] = $row[$Score2Index] ?? null;
-        $data['level_test_2'] = $row[$TestLevel2Index] ?? null;
-
-        $data['type_test_3']  = $row[$TypeTest3Index] ?? null;
-        $data['date_test_3']  = $row[$DateTest3Index] ?? null;
-        $data['score_test_3'] = $row[$Score3Index] ?? null;
-        $data['level_test_3'] = $row[$TestLevel3Index] ?? null;
-      }
       $extractedData[] = $data;
     }
 
@@ -324,12 +332,12 @@ class LeanerGrowthReportController extends Controller {
     }
 
 // Unset reference to avoid unintended modifications
-    unset($data);
 
+    unset($data);
     $mergedData = array_values($mergedData);
     // $jsonData   = json_encode($mergedData, JSON_PRETTY_PRINT);
 
-    return array_filter($mergedData, fn($data) => !empty($data['email']));
+    return (array_filter($mergedData, fn($data) => !empty($data['email'])));
   }
 
   private function processLanguageData($records) {
@@ -392,6 +400,7 @@ class LeanerGrowthReportController extends Controller {
   }
 
   public function handle(Request $request) {
+
     ini_set('max_execution_time', 300);
     $request->validate(['csv_path' => 'required']);
     $fileWithExtension = pathinfo($request->csv_path, PATHINFO_BASENAME);
@@ -407,18 +416,17 @@ class LeanerGrowthReportController extends Controller {
     }
     try {
       Log::info('Job started for file: {}');
-      // dd($filePath);
 
       $data = $this->processCSV($request->csv_path);
 
       if (empty($data)) {
         Log::warning('No valid data found in the CSV file.');
 
-        return;
+        // return;
       }
 
       $groupedData = collect($data)->groupBy('langue');
-      // dd($groupedData);
+
       $processedData = LazyCollection::make(function () use ($groupedData) {
         foreach ($groupedData as $languageGroup) {
           foreach ($this->processLanguageData($languageGroup) as $processed) {
@@ -539,7 +547,7 @@ class LeanerGrowthReportController extends Controller {
         ]);
       };
 
-      return response()->json(['message' => "CSV file {$fileWithExtension} imported successfully."]);
+      return response()->json(['message' => "CSVw file {$fileWithExtension} imported successfully."]);
     } catch (\Exception $e) {
       Log::error("Job failed with exception: {$e->getMessage()}", [
         'file'  => $e->getFile(),

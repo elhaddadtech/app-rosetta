@@ -3,7 +3,9 @@
 namespace App\Http\Controllers\api;
 
 use App\Http\Controllers\Controller;
+use App\Models\Branche;
 use App\Models\DoTest;
+use App\Models\Institution;
 use App\Models\Language;
 use App\Models\Result;
 use Carbon\Carbon;
@@ -11,16 +13,75 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
 class ResultController extends Controller {
+
   public function index() {
     // Fetch all results with student and language relations
-    return response()->json(Result::paginate(1000));
+    $results      = Result::with(['course'])->paginate(30);
+    $institutions = Institution::all()->unique('libelle');
+
+    // Transform each result
+    $transformedResults = $results->through(function ($result) {
+      // Extract first course if available
+      $firstCourse = $result->course->first();
+
+      return [
+        'id'                  => $result->id,
+        'type_test_1'         => $result->type_test_1,
+        'date_test_1'         => $result->date_test_1,
+        'score_test_1'        => $result->score_test_1,
+        'level_test_1'        => $result->level_test_1,
+        'test_time_1'         => $result->test_time_1,
+        'desktop_time'        => $result->desktop_time,
+        'mobile_time'         => $result->mobile_time,
+        'total_time'          => $result->total_time,
+        'type_test_2'         => $result->type_test_2,
+        'date_test_2'         => $result->date_test_2,
+        'score_test_2'        => $result->score_test_2,
+        'level_test_2'        => $result->level_test_2,
+        'type_test_3'         => $result->type_test_3,
+        'date_test_3'         => $result->date_test_3,
+        'score_test_3'        => $result->score_test_3,
+        'level_test_3'        => $result->level_test_3,
+        'type_test_4'         => $result->type_test_4,
+        'date_test_4'         => $result->date_test_4,
+        'score_test_4'        => $result->score_test_4,
+        'level_test_4'        => $result->level_test_4,
+        'student_id'          => $result->student_id,
+        'language_id'         => $result->language_id,
+        'file'                => $result->file,
+        'language_libelle'    => $result->language_libelle,
+        'email'               => $result->email,
+        'full_name'           => $result->full_name,
+        'cne'                 => $result->cne,
+        'apogee'              => $result->apogee,
+        'group_libelle'       => $result->group_libelle,
+        'semester_libelle'    => $result->semester_libelle,
+        'institution_libelle' => $result->institution_libelle,
+        'branch_libelle'      => $result->branch_libelle,
+
+        // Include course data if available
+        'total_lessons'       => $firstCourse ? $firstCourse->total_lessons : null,
+        'noteCC1'             => $firstCourse ? $firstCourse->noteCC1 : null,
+        'noteCC2'             => $firstCourse ? $firstCourse->noteCC2 : null,
+        'noteCC'              => $firstCourse ? $firstCourse->noteCC : null,
+        'note_ceef'           => $firstCourse ? $firstCourse->note_ceef : null,
+      ];
+    });
+
+    // Return transformed response with pagination metadata
+
+    return response()->json([
+      'results'     => $transformedResults,
+      'institution' => $institutions,
+    ]);
+
   }
 
   public function store(Request $request) {
     // Validate the input
     $validated = $request->validate([
       'results'                => 'required|array', // Expecting an array of results
-      'results.*.Test_1' => 'required|string|max:45',
+      'results.*.Test_1'       => 'required|string|max:45',
       'results.*.Score_Test_1' => 'required|string|max:45',
       'results.*.Time_PC'      => 'required|string|max:45',
       'results.*.Time_Mobile'  => 'required|string|max:45',
@@ -75,9 +136,9 @@ class ResultController extends Controller {
           'year'       => Carbon::now()->year,
         ],
         [
-          'result_id' => $result->id, // Use the result's ID
+          'result_id'  => $result->id, // Use the result's ID
           'student_id' => $student->user_id,
-          'year'      => Carbon::now()->year,
+          'year'       => Carbon::now()->year,
         ]
       );
     }
@@ -85,9 +146,86 @@ class ResultController extends Controller {
     return response()->json(['status' => 'success', 'message' => 'Results stored successfully'], 201);
   }
 
-  public function show(Result $result) {
-    // Fetch a specific result with relations
-    return response()->json($result->load(['student', 'language']));
+  public function show(Request $request) {
+    // Validate input
+    $validated = $request->validate([
+      'searchInput' => 'nullable|string', // Allow empty values
+    ]);
+
+    $search = $validated['searchInput'] ?? null;
+
+    // Query with filtering if search is provided
+    $resultsQuery = Result::with(['course', 'student.user']);
+
+    if ($search) {
+      $resultsQuery->whereHas('student.user', function ($query) use ($search) {
+        $query->where('email', 'LIKE', "%$search%")
+              ->orWhere('first_name', 'LIKE', "%$search%")
+              ->orWhere('last_name', 'LIKE', "%$search%");
+      });
+    }
+
+    $results = $resultsQuery->paginate(30);
+
+    // Handle case where no results are found
+    if ($results->isEmpty()) {
+      return response()->json([
+        'message' => 'No results found.',
+        'results' => [],
+      ], );
+    }
+
+    // Transform each result
+    $transformedResults = $results->through(function ($result) {
+      $firstCourse = $result->course->first();
+      $student     = $result->student;
+      $user        = $student ? $student->user : null;
+
+      return [
+        'id'                  => $result->id,
+        'type_test_1'         => $result->type_test_1,
+        'date_test_1'         => $result->date_test_1,
+        'score_test_1'        => $result->score_test_1,
+        'level_test_1'        => $result->level_test_1,
+        'test_time_1'         => $result->test_time_1,
+        'desktop_time'        => $result->desktop_time,
+        'mobile_time'         => $result->mobile_time,
+        'total_time'          => $result->total_time,
+        'type_test_2'         => $result->type_test_2,
+        'date_test_2'         => $result->date_test_2,
+        'score_test_2'        => $result->score_test_2,
+        'level_test_2'        => $result->level_test_2,
+        'type_test_3'         => $result->type_test_3,
+        'date_test_3'         => $result->date_test_3,
+        'score_test_3'        => $result->score_test_3,
+        'level_test_3'        => $result->level_test_3,
+        'type_test_4'         => $result->type_test_4,
+        'date_test_4'         => $result->date_test_4,
+        'score_test_4'        => $result->score_test_4,
+        'level_test_4'        => $result->level_test_4,
+        'student_id'          => $result->student_id,
+        'language_id'         => $result->language_id,
+        'file'                => $result->file,
+        'language_libelle'    => $result->language_libelle,
+        'email'               => $user ? $user->email : null,
+        'full_name'           => $user ? $user->first_name . ' ' . $user->last_name : null,
+        'cne'                 => $student ? $student->cne : null,
+        'apogee'              => $student ? $student->apogee : null,
+        'group_libelle'       => $result->group_libelle,
+        'semester_libelle'    => $result->semester_libelle,
+        'institution_libelle' => $result->institution_libelle,
+        'branch_libelle'      => $result->branch_libelle,
+        'total_lessons'       => $firstCourse ? $firstCourse->total_lessons : null,
+        'noteCC1'             => $firstCourse ? $firstCourse->noteCC1 : null,
+        'noteCC2'             => $firstCourse ? $firstCourse->noteCC2 : null,
+        'noteCC'              => $firstCourse ? $firstCourse->noteCC : null,
+        'note_ceef'           => $firstCourse ? $firstCourse->note_ceef : null,
+      ];
+    });
+
+    return response()->json([
+      'results' => $transformedResults,
+    ]);
   }
 
   public function update(Request $request, Result $result) {
@@ -123,4 +261,104 @@ class ResultController extends Controller {
 
     return response()->json(['success' => true, 'message' => 'Result deleted successfully'], 200);
   }
+
+  public function searchByInstitution(Request $request) {
+    // Validate the request
+    $request->validate([
+      'institution' => 'required|exists:institutions,libelle',
+      'branch'      => 'nullable', // Allow nullable branch_libelle
+    ]);
+
+    $institution = $request->input('institution');
+    $branch      = $request->input('branch');
+
+    // Query with filtering if institution and/or branch is provided
+    $resultsQuery = Result::with(['course', 'student.user']);
+
+    // Filter by institution
+    $resultsQuery->whereHas('student.institution', function ($query) use ($institution) {
+      $query->where('libelle', 'LIKE', "%$institution%");
+    });
+
+    // Filter by branch if provided
+    if ($branch) {
+      $resultsQuery->whereHas('student.branch', function ($query) use ($branch) {
+        $query->where('libelle', 'LIKE', "%$branch%");
+      });
+    }
+
+    $results = $resultsQuery->paginate(30);
+
+    // Fetch unique branches for the given institution using a corrected query
+    $branches = Branche::whereIn('id', function ($query) use ($institution) {
+      $query->select('branch_id')
+            ->from('students')
+            ->join('institutions', 'institutions.id', '=', 'students.institution_id') // Join with the institutions table
+            ->where('institutions.libelle', 'LIKE', "%$institution%")
+            ->whereNotNull('branch_id')
+            ->distinct();
+    })->get();
+
+    // Handle case where no results are found
+    if ($results->isEmpty()) {
+      return response()->json([
+        'message' => 'No results found.',
+        'results' => [],
+      ]);
+    }
+
+    // Transform each result
+    $transformedResults = $results->through(function ($result) {
+      $firstCourse = $result->course->first();
+      $student     = $result->student;
+      $user        = $student ? $student->user : null;
+
+      return [
+        'id'                  => $result->id,
+        'type_test_1'         => $result->type_test_1,
+        'date_test_1'         => $result->date_test_1,
+        'score_test_1'        => $result->score_test_1,
+        'level_test_1'        => $result->level_test_1,
+        'test_time_1'         => $result->test_time_1,
+        'desktop_time'        => $result->desktop_time,
+        'mobile_time'         => $result->mobile_time,
+        'total_time'          => $result->total_time,
+        'type_test_2'         => $result->type_test_2,
+        'date_test_2'         => $result->date_test_2,
+        'score_test_2'        => $result->score_test_2,
+        'level_test_2'        => $result->level_test_2,
+        'type_test_3'         => $result->type_test_3,
+        'date_test_3'         => $result->date_test_3,
+        'score_test_3'        => $result->score_test_3,
+        'level_test_3'        => $result->level_test_3,
+        'type_test_4'         => $result->type_test_4,
+        'date_test_4'         => $result->date_test_4,
+        'score_test_4'        => $result->score_test_4,
+        'level_test_4'        => $result->level_test_4,
+        'student_id'          => $result->student_id,
+        'language_id'         => $result->language_id,
+        'file'                => $result->file,
+        'language_libelle'    => $result->language_libelle,
+        'email'               => $user ? $user->email : null,
+        'full_name'           => $user ? $user->first_name . ' ' . $user->last_name : null,
+        'cne'                 => $student ? $student->cne : null,
+        'apogee'              => $student ? $student->apogee : null,
+        'group_libelle'       => $result->group_libelle,
+        'semester_libelle'    => $result->semester_libelle,
+        'institution_libelle' => $result->institution_libelle,
+        'branch_libelle'      => $result->branch_libelle,
+        'total_lessons'       => $firstCourse ? $firstCourse->total_lessons : null,
+        'noteCC1'             => $firstCourse ? $firstCourse->noteCC1 : null,
+        'noteCC2'             => $firstCourse ? $firstCourse->noteCC2 : null,
+        'noteCC'              => $firstCourse ? $firstCourse->noteCC : null,
+        'note_ceef'           => $firstCourse ? $firstCourse->note_ceef : null,
+      ];
+    });
+
+    return response()->json([
+      'results'  => $transformedResults,
+      'branches' => $branches, // Unique branches for the institution
+    ]);
+  }
+
 }

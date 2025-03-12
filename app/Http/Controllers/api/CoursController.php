@@ -72,11 +72,11 @@ class CoursController extends Controller {
     return Excel::download(new CouresExport(), 'coures_details.csv', \Maatwebsite\Excel\Excel::CSV);
   }
 
-  public function calculateNotes() {
+  public function calculateNotes($institution, $file) {
     // Get scaled scores mapping
     $scaled_scores = DB::table('range_cefefrs')->get();
 
-// Fetch results data
+    // Fetch results data
     $results = DB::table('results as r')
       ->join('languages as l', 'r.language_id', '=', 'l.id')
       ->join('students as s', 'r.student_id', '=', 's.id')
@@ -93,78 +93,116 @@ class CoursController extends Controller {
         DB::raw('MAX(sm.libelle) as semester_libelle'),
         DB::raw('MAX(r.score_test_4) as score_test_4'),
       ])
-      ->whereNotNull('r.score_test_4') // Ensures score_test_4 is not NULL
-      ->whereRaw('LOWER(r.file) = LOWER(?)', [strtolower('learnergrowth_2025-02-27')]) // Case-insensitive file filter
+      ->whereRaw('LOWER(i.libelle) = LOWER(?)', [strtolower($institution)]) // institution filter
+      ->whereRaw('LOWER(r.file) = LOWER(?)', [strtolower($file)]) // repport file filter
       ->groupBy('u.email', 'l.libelle', 'r.student_id', 'r.language_id') // Group by unique `email` and `language`
       ->get();
 
-// Process results and calculate note_ceef
+    // Process results and calculate note_ceef
     foreach ($results as &$result) {
-      // Extraire et nettoyer score_test_4
+      // Extract and clean score_test_4
       $score_test_4 = isset($result->score_test_4) ? explode('/', $result->score_test_4)[0] : null;
       $score_test_4 = is_numeric(trim($score_test_4)) ? (int) trim($score_test_4) : null;
       $language     = strtolower($result->language_libelle);
       $semester     = isset($result->semester_libelle) ? strtolower($result->semester_libelle) : null;
 
-      // Si le semestre est NULL, attribuer "Semestre non défini"
       if (is_null($semester)) {
         $result->note_ceef = 'Semestre non défini';
       } else {
         $note_ceef = null;
-
-        // Trouver le scaled_score correspondant
         foreach ($scaled_scores as $range) {
           if (strtolower($range->language) === $language && strtolower($range->semester) === $semester) {
             $scaled_score = $range->scaled_score;
             if ($score_test_4 == 0) {
-              $note_ceef = '0';
+              $note_ceef = 'Abs';
             } elseif ($score_test_4 <= $scaled_score) {
-              // Appliquer la règle de trois
               $calculated_note = ($score_test_4 / $scaled_score) * 10;
               $note_ceef       = round($calculated_note, 2);
             } elseif ($score_test_4 > $scaled_score) {
-              // Appliquer la règle de trois
               $calculated_note = ($score_test_4 - $scaled_score) / (400 - $scaled_score) * 10 + 10;
               $note_ceef       = round($calculated_note, 2);
             } else {
               $note_ceef = 'Note non disponible';
             }
-
           }
         }
 
-        // Si aucune note n'a été attribuée
         if (is_null($note_ceef)) {
-          $note_ceef = 'Note non disponible';
+          $note_ceef = 'Problème de semestre ou de langue';
         }
 
         $result->note_ceef = $note_ceef;
       }
 
-      //  Récupérer `result_id` correspondant dans la table `results`
+      // Get result_id from results table
       $result_id = DB::table('results')
         ->where('student_id', $result->student_id)
         ->where('language_id', $result->language_id)
-        ->value('id'); // Récupérer `id` de la table `results`
+        ->value('id');
 
-      //  Mettre à jour la table `courses` avec la nouvelle note_ceef
+      // Update courses table with the new note_ceef
       if ($result_id) {
         DB::table('courses')
           ->where('result_id', $result_id)
           ->update(['note_ceef' => $result->note_ceef]);
       }
     }
+    unset($result); // Clean up reference
 
-// Nettoyer la référence
-    unset($result);
+    // **Step: Adjust "Abs" if another note exists for the same email**
+    $groupedResults = collect($results)->groupBy('user_email');
 
-// Now $results contains note_ceef based on language, scaled score, and semester.
+    foreach ($groupedResults as $email => $records) {
+      $hasValidScore = $records->contains(fn($item) => $item->note_ceef !== 'Abs');
+
+      if ($hasValidScore) {
+        foreach ($records as $record) {
+          if ($record->note_ceef === 'Abs') {
+            $record->note_ceef = '0'; // if another note exists
+
+            // Update `courses` table for the modified `note_ceef`
+            $result_id = DB::table('results')
+              ->where('student_id', $record->student_id)
+              ->where('language_id', $record->language_id)
+              ->value('id');
+
+            if ($result_id) {
+              DB::table('courses')
+                ->where('result_id', $result_id)
+                ->update(['note_ceef' => 'pas de note']); // Update to 0 in courses table
+            }
+          }
+        }
+      }
+
+      // **Step: If both languages exist and both score_test_4 are NULL, change "Abs" to "pas encore"**
+      $bothLanguagesExist = $records->count() > 1;
+      $allScoresNull      = $records->every(fn($item) => is_null($item->score_test_4));
+      $allAbs             = $records->every(fn($item) => $item->note_ceef === 'Abs');
+
+      if ($bothLanguagesExist && $allScoresNull && $allAbs) {
+        foreach ($records as $record) {
+          $record->note_ceef = 'pas encore';
+
+          // Update `courses` table for the modified `note_ceef`
+          $result_id = DB::table('results')
+            ->where('student_id', $record->student_id)
+            ->where('language_id', $record->language_id)
+            ->value('id');
+
+          if ($result_id) {
+            DB::table('courses')
+              ->where('result_id', $result_id)
+              ->update(['note_ceef' => 'pas encore']); // Update in courses table
+          }
+        }
+      }
+    }
 
     return response()->json([
       'status'  => true,
-      'message' => 'Notes calculées avec succès',
-      'results' => $results,
-      // 'scaled_scores' => $scaled_scores,
+      'message' => 'Notes calculées et mises à jour avec succès',
+      'results' => $groupedResults->flatten(1),
     ]);
   }
 

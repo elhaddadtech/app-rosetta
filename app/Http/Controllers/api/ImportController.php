@@ -11,6 +11,14 @@ use Maatwebsite\Excel\Facades\Excel;
 class ImportController extends Controller {
 
   public function importStudents(Request $request) {
+    // Validate if a file is provided
+    if (!$request->hasFile('csv_file')) {
+      return response()->json([
+        'status'  => 'error',
+        'message' => 'No file uploaded',
+      ], 400);
+    }
+
     $file   = $request->file('csv_file');
     $import = new UsersImport();
 
@@ -28,7 +36,6 @@ class ImportController extends Controller {
       'imported_users' => $import->count,
       'message'        => 'CSV file imported successfully',
     ], 200);
-
   }
 
   public function importUpdateCSV(Request $request) {

@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 // use App\Imports\UsersImport;
 use App\Http\Resources\UserResource;
 use App\Models\Institution;
+use App\Models\Role;
 use App\Models\User;
 use Illuminate\Http\Request;
 
@@ -126,6 +127,18 @@ class UserController extends Controller {
     $user->delete();
 
     return response()->json(['success' => true, 'message' => 'User deleted successfully'], 200);
+  }
+
+  public function appUsers() {
+    $role = Role::where('libelle', 'etudiant')->first();
+
+    if (!$role) {
+      return response()->json(['success' => false, 'message' => 'Role not found'], 404);
+    }
+
+    $users = User::where('role_id', '!=', $role->id)->get();
+
+    return response()->json(['success' => true, 'users' => $users], 200);
   }
 
 }

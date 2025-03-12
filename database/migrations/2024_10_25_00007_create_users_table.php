@@ -9,15 +9,15 @@ return new class extends Migration {
    * Run the migrations.
    */
   public function up(): void {
-    Schema::create('users', function (Blueprint $table) {
-      $table->id();
-      $table->string('first_name', 45)->nullable();
-      $table->string('last_name', 45)->nullable();
-      $table->string('email', 100)->unique(); // Index unique pour l'email
-      $table->foreignId('role_id')->nullable()->constrained()->onDelete('cascade');;
-      $table->timestamps();
-      $table->softDeletes();
-    });
+      Schema::create('users', function (Blueprint $table) {
+        $table->id();
+        $table->string('first_name', 45)->nullable();
+        $table->string('last_name', 45)->nullable();
+        $table->string('email', 100)->unique(); // Index unique pour l'email
+        $table->foreignId('role_id')->nullable()->constrained()->onDelete('cascade');;
+        $table->timestamps();
+        $table->softDeletes();
+      });
 
     // Schema::create('password_reset_tokens', function (Blueprint $table) {
     //     $table->string('email')->primary();

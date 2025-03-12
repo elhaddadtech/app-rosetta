@@ -10,12 +10,6 @@ class CefrMapping extends Model {
 
   protected $table = 'cefr_mappings';
 
-  protected $fillable = [
-    'level',
-    'language',
-    'lesson',
-    'seuil_heures_jours',
-    'noteCC1_ratio',
-    'noteCC2_ratio',
-  ];
+  protected $fillable = ['level', 'language', 'lesson', 'seuil_heures_jours', 'noteCC1_ratio', 'noteCC2_ratio'];
+  protected $hidden   = ['created_at', 'updated_at'];
 }

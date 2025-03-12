@@ -1,66 +1,63 @@
 <?php
 
-namespace App\Http\Controllers;
+namespace App\Http\Controllers\api;
 
+use App\Http\Controllers\Controller;
 use App\Models\RangeCefefr;
-use App\Http\Requests\StoreRangeCefefrRequest;
-use App\Http\Requests\UpdateRangeCefefrRequest;
+use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 
-class RangeCefefrController extends Controller
-{
-    /**
-     * Display a listing of the resource.
-     */
-    public function index()
-    {
-        //
-    }
+class RangeCefefrController extends Controller {
+  /**
+   * Display a listing of the resource.
+   */
+  public function index(): JsonResponse {
+    return response()->json(RangeCefefr::all());
+  }
 
-    /**
-     * Show the form for creating a new resource.
-     */
-    public function create()
-    {
-        //
-    }
+  /**
+   * Store a newly created resource in storage.
+   */
+  public function store(Request $request): JsonResponse {
+    $data = $request->validate([
+      'language'     => 'nullable|string',
+      'scaled_score' => 'nullable|integer',
+      'semester'     => 'nullable|string',
+    ]);
 
-    /**
-     * Store a newly created resource in storage.
-     */
-    public function store(StoreRangeCefefrRequest $request)
-    {
-        //
-    }
+    $rangeCefefr = RangeCefefr::create($data);
 
-    /**
-     * Display the specified resource.
-     */
-    public function show(RangeCefefr $rangeCefefr)
-    {
-        //
-    }
+    return response()->json($rangeCefefr, 201);
+  }
 
-    /**
-     * Show the form for editing the specified resource.
-     */
-    public function edit(RangeCefefr $rangeCefefr)
-    {
-        //
-    }
+  /**
+   * Display the specified resource.
+   */
+  public function show(RangeCefefr $rangeCefefr): JsonResponse {
+    return response()->json($rangeCefefr);
+  }
 
-    /**
-     * Update the specified resource in storage.
-     */
-    public function update(UpdateRangeCefefrRequest $request, RangeCefefr $rangeCefefr)
-    {
-        //
-    }
+  /**
+   * Update the specified resource in storage.
+   */
+  public function update(Request $request, RangeCefefr $rangeCefefr): JsonResponse {
+    $data = $request->validate([
+      'language'     => 'nullable|string',
+      'scaled_score' => 'nullable|integer',
+      'semester'     => 'nullable|string',
+    ]);
 
-    /**
-     * Remove the specified resource from storage.
-     */
-    public function destroy(RangeCefefr $rangeCefefr)
-    {
-        //
-    }
+    $rangeCefefr->update($data);
+
+    return response()->json($rangeCefefr);
+  }
+
+  /**
+   * Remove the specified resource from storage.
+   */
+  public function destroy(RangeCefefr $rangeCefefr): JsonResponse {
+    $rangeCefefr->delete();
+
+    return response()->json(['message' => 'Deleted successfully'], 200);
+  }
 }

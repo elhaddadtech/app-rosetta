@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\api;
 
 use App\Http\Controllers\Controller;
+use App\Models\Branche;
 use App\Models\Student;
 use App\Models\User;
 use Illuminate\Http\Request;
@@ -129,8 +130,8 @@ class SearchController extends Controller {
       'cne'         => $student?->cne ?? 'N/A',
       'apogee'      => $student?->apogee ?? 'N/A',
       'birthdate'   => $student?->birthdate ?? 'N/A',
-      'role'        => 'admin',
-      // 'role'        => $student?->user?->role_libelle ?? null,
+      // 'role'        => 'admin',
+      'role'        => $student?->user?->role_libelle ?? null,
       'languages'   => $student?->results->groupBy('language_libelle')->map(function ($results) {
         return $results->map(function ($result) {
           return [
@@ -140,15 +141,18 @@ class SearchController extends Controller {
             'score_test_1' => $result->score_test_1,
             'level_test_1' => $result->level_test_1,
             'total_time'   => $result->total_time,
-            'type_test_2'  => $result->type_test_2,
-            'date_test_2'  => $result->date_test_2,
-            'score_test_2' => $result->score_test_2,
-            'level_test_2' => $result->level_test_2,
+            'type_test_2'  => $result->type_test_2 == null ? 'N/A' : $result->type_test_2,
+            'date_test_2'  => $result->date_test_2 == null ? 'N/A' : $result->date_test_2,
+            'score_test_2' => $result->score_test_2 == null ? 'N/A' : $result->score_test_2,
+            'level_test_2' => $result->level_test_2 == null ? 'N/A' : $result->level_test_2,
 
-            'type_test_3'  => $result->type_test_3,
-            'date_test_3'  => $result->date_test_3,
-            'score_test_3' => $result->score_test_3,
-            'level_test_3' => $result->level_test_3,
+            'type_test_3'  => $result->type_test_3 == null ? 'N/A' : $result->type_test_3,
+            'date_test_3'  => $result->date_test_3 == null ? 'N/A' : $result->date_test_3,
+            'score_test_3' => $result->score_test_3 == null ? 'N/A' : $result->score_test_3,
+            'level_test_3' => $result->level_test_3 == null ? 'N/A' : $result->level_test_3,
+
+            'score_test_4' => $result->score_test_4 == '' ? 'N/A' : $result->score_test_4,
+            'level_test_4' => $result->level_test_4 == '' ? 'N/A' : $result->score_test_4,
 
             'courses'      => $result->course->map(function ($course) {
               return [
@@ -195,14 +199,41 @@ class SearchController extends Controller {
 
   }
   public function searchByInstitution(Request $request) {
-    //search by institution relation between user ,student and institution
+    // Validate the request
+    $request->validate([
+      'institution_id' => 'required|integer|exists:institutions,id',
+      'branch_id'      => 'nullable', // Allow nullable branch_id (string or integer)
+    ]);
 
-    $students = User::whereHas('student', function ($query) use ($request) {
-      $query->where('institution_id', $request->institution_id); // Replace with your condition
-    })->paginate(30);
+    // Convert "null" string to actual null
+    $branchId = ($request->branch_id === 'null' || $request->branch_id === null) ? null : (int) $request->branch_id;
+
+    // Get paginated students based on institution_id (and optionally branch_id)
+    $studentsQuery = User::whereHas('student', function ($query) use ($request, $branchId) {
+      $query->where('institution_id', $request->institution_id);
+
+      // Only filter by branch_id if it's not null
+      if (!isset($branchId)) {
+        return; // If branch_id is null, don't add additional filtering
+      }
+
+      $query->where('branch_id', $branchId);
+    });
+
+    $students = $studentsQuery->paginate(30);
+
+    // Get all unique branches where students belong to the given institution
+    $branches = Branche::whereIn('id', function ($query) use ($request) {
+      $query->select('branch_id')
+            ->from('students')
+            ->where('institution_id', $request->institution_id)
+            ->whereNotNull('branch_id')
+            ->distinct();
+    })->get();
 
     return response()->json([
-      'students' => $students,
+      'students' => $students, // Paginated students
+      'branches' => $branches, // Unique branches without duplicates
     ]);
   }
 

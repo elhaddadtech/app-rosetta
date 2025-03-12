@@ -10,7 +10,7 @@ class RangeCefefr extends Model {
     'scaled_score',
     'semester',
   ];
-  protected $table   = 'range_cefefrs';
-  protected $hiddens = ['created_at', 'updated_at'];
+  protected $table  = 'range_cefefrs';
+  protected $hidden = ['created_at', 'updated_at'];
 
 }
