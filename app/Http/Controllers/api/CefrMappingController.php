@@ -12,7 +12,7 @@ class CefrMappingController extends Controller {
    * Display a listing of the resource.
    */
   public function index(): JsonResponse {
-    return response()->json(CefrMapping::all());
+    return response()->json(['success' => true, 'data' => CefrMapping::all()]);
   }
 
   /**
@@ -62,7 +62,7 @@ class CefrMappingController extends Controller {
       ]);
     }
 
-    return response()->json($cefrMapping);
+    return response()->json(['success' => true, 'data' => $cefrMapping]);
 
   }
 

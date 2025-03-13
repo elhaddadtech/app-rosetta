@@ -12,7 +12,7 @@ class RangeCefefrController extends Controller {
    * Display a listing of the resource.
    */
   public function index(): JsonResponse {
-    return response()->json(RangeCefefr::all());
+    return response()->json(['success' => true, 'data' => RangeCefefr::all()]);
   }
 
   /**
@@ -49,7 +49,7 @@ class RangeCefefrController extends Controller {
 
     $rangeCefefr->update($data);
 
-    return response()->json($rangeCefefr);
+    return response()->json(['success' => true, 'data' => $rangeCefefr]);
   }
 
   /**
