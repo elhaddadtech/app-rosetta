@@ -130,15 +130,15 @@ class UserController extends Controller {
   }
 
   public function appUsers() {
-    $role = Role::where('libelle', 'etudiant')->first();
-
+    $role  = Role::where('libelle', 'etudiant')->first();
+    $roles = Role::where('id', '!=', $role->id)->get();
     if (!$role) {
       return response()->json(['success' => false, 'message' => 'Role not found'], 404);
     }
+    $institution = Institution::get();
+    $users       = User::where('role_id', '!=', $role->id)->distinct()->get();
 
-    $users = User::where('role_id', '!=', $role->id)->get();
-
-    return response()->json(['success' => true, 'users' => $users], 200);
+    return response()->json(['success' => true, 'roles' => $roles, 'institutions' => $institution, 'users' => $users], 200);
   }
 
 }
