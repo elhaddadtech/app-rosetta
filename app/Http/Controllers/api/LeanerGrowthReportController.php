@@ -491,6 +491,8 @@ class LeanerGrowthReportController extends Controller {
           'score_test_4' => $dataa['score_test_4'],
           'level_test_4' => $dataa['level_test_4'],
           'file'         => strtolower($this->fileName),
+          'created_at'   => now(),
+          'updated_at'   => now(),
         ];
       }
 

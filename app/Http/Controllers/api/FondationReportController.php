@@ -229,8 +229,8 @@ class FondationReportController extends Controller {
         'noteCC2'        => round($noteCC2, 2),
         'noteCC'         => round($noteCC, 2),
         'file'           => strtolower($this->fileName),
-        // 'created_at'     => now(),
-        // 'updated_at'     => now(),
+        'created_at'     => now(),
+        'updated_at'     => now(),
       ];
     }
 

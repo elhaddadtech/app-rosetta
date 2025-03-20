@@ -11,13 +11,13 @@ return new class extends Migration {
   public function up(): void {
     Schema::create('courses', function (Blueprint $table) {
       $table->id(); // Primary key
-      $table->string('cours_name'); // Course Name
-      $table->string('cours_progress'); // Course Progress
+      $table->string('cours_name')->nullable(); // Course Name
+      $table->string('cours_progress')->nullable(); // Course Progress
       $table->string('cours_grade')->nullable(); // Course Grade (nullable if no grade)
       $table->integer('total_lessons')->nullable(); // Total Lessons
-      $table->string('noteCC1', 20)->nullable(); // Note for CC1  (nullable if no note)
-      $table->string('noteCC2', 20)->nullable(); // Note for CC2 (nullable if no note)
-      $table->string('noteCC', 20)->nullable(); // Note for CC (nullable if no note)
+      $table->string('noteCC1', 20)->default(0); // Note for CC1  (nullable if no note)
+      $table->string('noteCC2', 20)->default(0); // Note for CC2 (nullable if no note)
+      $table->string('noteCC', 20)->default(0); // Note for CC (nullable if no note)
       $table->string('note_ceef', 20)->nullable(); // Note for CC (nullable if no note)
 
       // Foreign key to the results table

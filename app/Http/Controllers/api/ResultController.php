@@ -16,7 +16,9 @@ class ResultController extends Controller {
 
   public function index() {
     // Fetch all results with student and language relations
-    $results      = Result::with(['course'])->paginate(30);
+    $results = Result::with(['course'])
+      ->orderBy('created_at', 'desc') // Order by latest inserted
+      ->paginate(30);
     $institutions = Institution::all()->unique('libelle');
 
     // Transform each result

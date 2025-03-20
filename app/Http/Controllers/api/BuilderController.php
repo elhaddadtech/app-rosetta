@@ -347,12 +347,127 @@ class BuilderController extends Controller {
   //   return Excel::download(new CouresExport, 'courses.csv', \Maatwebsite\Excel\Excel::CSV);
   // }
 
+  // public function exportCourseToCsv($institution, $branch = null) {
+  //   set_time_limit(1200);
+  //   $fileValue = 'foundations_2024_2024-09-04-2025-02-05';
+  //   $fileName  = 'courses_notes_' . $institution . '.csv';
+  //   $filePath  = storage_path('app/public/' . $fileName);
+  //   $handle    = fopen($filePath, 'w');
+
+  //   // Add UTF-8 BOM for compatibility with Excel
+  //   fwrite($handle, "\xEF\xBB\xBF");
+
+  //   // Write the CSV header
+  //   fputcsv($handle, [
+  //     'Rapport',
+  //     'First Name',
+  //     'Last Name',
+  //     'Email',
+  //     'Language',
+  //     'Institution',
+  //     'Branch',
+  //     'Group',
+  //     'Semester',
+  //     'Total Lessons',
+  //     'Total Time',
+  //     'score_test_1',
+  //     'level_test_1',
+  //     'score_test_2',
+  //     'level_test_2',
+  //     'score_test_3',
+  //     'level_test_3',
+  //     'Max_score_test',
+  //     'Max_level_test',
+  //     'noteCC1',
+  //     'noteCC2',
+  //     'noteCC',
+  //     'note_ceef',
+  //   ]);
+
+  //   $query = DB::table('results as r')
+  //     ->join('languages as l', 'r.language_id', '=', 'l.id')
+  //     ->join('students as s', 'r.student_id', '=', 's.id')
+  //     ->join('users as u', 's.user_id', '=', 'u.id')
+  //     ->join('institutions as i', 's.institution_id', '=', 'i.id')
+  //     ->join('courses as c', 'c.result_id', '=', 'r.id')
+  //     ->leftJoin('groups as g', 's.group_id', '=', 'g.id')
+  //     ->leftJoin('branches as b', 's.branch_id', '=', 'b.id')
+  //     ->leftJoin('semesters as sm', 's.semester_id', '=', 'sm.id')
+  //     ->select([
+  //       'u.email as user_email',
+  //       'l.libelle as language_libelle',
+  //       DB::raw('MAX(c.file) as file'),
+  //       DB::raw('MAX(u.first_name) as first_name'),
+  //       DB::raw('MAX(u.last_name) as last_name'),
+  //       DB::raw('MAX(i.libelle) as institution_libelle'),
+  //       DB::raw('MAX(b.libelle) as branch_libelle'),
+  //       DB::raw('MAX(g.libelle) as group_libelle'),
+  //       DB::raw('MAX(sm.libelle) as semester_libelle'),
+  //       DB::raw('MAX(c.total_lessons) as total_lessons'),
+  //       DB::raw('MAX(r.total_time) as total_time'),
+  //       DB::raw('MAX(r.score_test_1) as score_test_1'),
+  //       DB::raw('MAX(r.level_test_1) as level_test_1'),
+  //       DB::raw('MAX(r.score_test_2) as score_test_2'),
+  //       DB::raw('MAX(r.level_test_2) as level_test_2'),
+  //       DB::raw('MAX(r.score_test_3) as score_test_3'),
+  //       DB::raw('MAX(r.level_test_3) as level_test_3'),
+  //       DB::raw('MAX(r.score_test_4) as score_test_4'),
+  //       DB::raw('MAX(r.level_test_4) as level_test_4'),
+  //       DB::raw('GREATEST(MAX(r.score_test_1), MAX(r.score_test_2), MAX(r.score_test_3), MAX(r.score_test_4)) as max_score_test'),
+  //       DB::raw('MAX(c.noteCC1) as noteCC1'),
+  //       DB::raw('MAX(c.noteCC2) as noteCC2'),
+  //       DB::raw('MAX(c.noteCC) as noteCC'),
+  //       DB::raw('MAX(c.note_ceef) as note_ceef'),
+  //     ])
+  //     ->whereRaw('LOWER(i.libelle) = LOWER(?)', [$institution]);
+
+  //   // Conditionally add the branch filter if provided
+  //   if ($branch && $branch != 'null') {
+  //     $query->whereRaw('LOWER(b.libelle) = LOWER(?)', [$branch]);
+  //   }
+
+  //   $query->groupBy('u.email', 'l.libelle')
+  //         ->orderBy('u.email')
+  //         ->chunk(2000, function ($rows) use ($handle) {
+  //           foreach ($rows as $row) {
+  //             fputcsv($handle, [
+  //               $row->file,
+  //               $row->first_name,
+  //               $row->last_name,
+  //               $row->user_email,
+  //               $row->language_libelle,
+  //               $row->institution_libelle,
+  //               $row->branch_libelle,
+  //               $row->group_libelle,
+  //               $row->semester_libelle,
+  //               $row->total_lessons,
+  //               $row->total_time,
+  //               $row->score_test_1,
+  //               $row->level_test_1,
+  //               $row->score_test_2,
+  //               $row->level_test_2,
+  //               $row->score_test_3,
+  //               $row->level_test_3,
+  //               $row->score_test_4,
+  //               $row->level_test_4,
+  //               $row->noteCC1,
+  //               $row->noteCC2,
+  //               $row->noteCC,
+  //               $row->note_ceef,
+  //             ]);
+  //           }
+  //         });
+
+  //   // Return the file as a downloadable response
+
+  //   return response()->download($filePath)->deleteFileAfterSend(true);
+  // }
+
   public function exportCourseToCsv($institution, $branch = null) {
     set_time_limit(1200);
-    $fileValue = 'foundations_2024_2024-09-04-2025-02-05';
-    $fileName  = 'courses_notes_' . $institution . '.csv';
-    $filePath  = storage_path('app/public/' . $fileName);
-    $handle    = fopen($filePath, 'w');
+    $fileName = 'results_notes_' . $institution . '.csv';
+    $filePath = storage_path('app/public/' . $fileName);
+    $handle   = fopen($filePath, 'w');
 
     // Add UTF-8 BOM for compatibility with Excel
     fwrite($handle, "\xEF\xBB\xBF");
@@ -389,21 +504,21 @@ class BuilderController extends Controller {
       ->join('students as s', 'r.student_id', '=', 's.id')
       ->join('users as u', 's.user_id', '=', 'u.id')
       ->join('institutions as i', 's.institution_id', '=', 'i.id')
-      ->join('courses as c', 'c.result_id', '=', 'r.id')
       ->leftJoin('groups as g', 's.group_id', '=', 'g.id')
       ->leftJoin('branches as b', 's.branch_id', '=', 'b.id')
       ->leftJoin('semesters as sm', 's.semester_id', '=', 'sm.id')
+      ->leftJoin('courses as c', 'c.result_id', '=', 'r.id') // LEFT JOIN sur courses
       ->select([
         'u.email as user_email',
         'l.libelle as language_libelle',
-        DB::raw('MAX(c.file) as file'),
+        DB::raw('MAX(r.file) as file'),
         DB::raw('MAX(u.first_name) as first_name'),
         DB::raw('MAX(u.last_name) as last_name'),
         DB::raw('MAX(i.libelle) as institution_libelle'),
         DB::raw('MAX(b.libelle) as branch_libelle'),
         DB::raw('MAX(g.libelle) as group_libelle'),
         DB::raw('MAX(sm.libelle) as semester_libelle'),
-        DB::raw('MAX(c.total_lessons) as total_lessons'),
+        DB::raw('IFNULL(MAX(c.total_lessons), 0) as total_lessons'), // Correction ici
         DB::raw('MAX(r.total_time) as total_time'),
         DB::raw('MAX(r.score_test_1) as score_test_1'),
         DB::raw('MAX(r.level_test_1) as level_test_1'),
@@ -414,14 +529,15 @@ class BuilderController extends Controller {
         DB::raw('MAX(r.score_test_4) as score_test_4'),
         DB::raw('MAX(r.level_test_4) as level_test_4'),
         DB::raw('GREATEST(MAX(r.score_test_1), MAX(r.score_test_2), MAX(r.score_test_3), MAX(r.score_test_4)) as max_score_test'),
-        DB::raw('MAX(c.noteCC1) as noteCC1'),
-        DB::raw('MAX(c.noteCC2) as noteCC2'),
-        DB::raw('MAX(c.noteCC) as noteCC'),
+        DB::raw('GREATEST(MAX(r.level_test_1), MAX(r.level_test_2), MAX(r.level_test_3), MAX(r.level_test_4)) as max_level_test'), // Correction
+        DB::raw('IFNULL(MAX(c.noteCC1), 0) as noteCC1'), // Remplace NULL par 0
+        DB::raw('IFNULL(MAX(c.noteCC2), 0) as noteCC2'), // Remplace NULL par 0
+        DB::raw('IFNULL(MAX(c.noteCC), 0) as noteCC'), // Remplace NULL par 0
         DB::raw('MAX(c.note_ceef) as note_ceef'),
       ])
       ->whereRaw('LOWER(i.libelle) = LOWER(?)', [$institution]);
 
-    // Conditionally add the branch filter if provided
+// Ajout de la condition sur la branche si nécessaire
     if ($branch && $branch != 'null') {
       $query->whereRaw('LOWER(b.libelle) = LOWER(?)', [$branch]);
     }
@@ -450,6 +566,7 @@ class BuilderController extends Controller {
                 $row->level_test_3,
                 $row->score_test_4,
                 $row->level_test_4,
+
                 $row->noteCC1,
                 $row->noteCC2,
                 $row->noteCC,
@@ -457,6 +574,8 @@ class BuilderController extends Controller {
               ]);
             }
           });
+
+    return response()->download($filePath)->deleteFileAfterSend(true);
 
     // Return the file as a downloadable response
 
